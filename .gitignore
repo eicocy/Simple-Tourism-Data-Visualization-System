@@ -1,0 +1,67 @@
+# Operating system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Logs and local runtime output
+*.log
+*.pid
+backend-start.log
+frontend-start.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+!server/.env.example
+!web/.env.example
+
+# Python cache and virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# Django local output
+server/staticfiles/
+server/media/*
+!server/media/.gitkeep
+server/uploads/*
+!server/uploads/.gitkeep
+*.sqlite3
+*.db
+
+# Node dependencies and frontend build output
+web/node_modules/
+web/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Imported source data files
+数据分析用/
+server/continent_names.txt
+*.xlsx
+*.xls
+*.csv
+*.tsv
+*.pdf
+
+# Thesis, review, rendering, and presentation artifacts
+论文截图素材/
+docx_rendered/
+docx_render_resume_review/
+lo_out/
+tmp/
+paper-shots.html
+er-redesign.svg
+基于Django+Vue的安全旅游国家推荐与可视化系统的设计与实现_查重报告单集.zip
+
+# Generated helper output from data maintenance scripts
+server/scripts/unresolved_continents.json
