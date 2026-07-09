@@ -1,8 +1,10 @@
 ﻿"""用户模块序列化器。"""
 
 from django.contrib.auth import authenticate, get_user_model
+from drf_spectacular.utils import OpenApiTypes, extend_schema_field
 from rest_framework import serializers
 
+from common.permissions import get_user_role
 from apps.users.models import UserProfile
 
 
@@ -17,6 +19,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         model = UserProfile
         fields = [
             "id",
+            "role",
             "nickname",
             "gender",
             "age",
@@ -35,6 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
     profile = serializers.SerializerMethodField()
     # 返回当前用户角色，便于前端区分普通用户与管理员
     role_name = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -47,6 +51,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "is_staff",
             "is_superuser",
+            "role",
             "last_login",
             "date_joined",
             "role_name",
@@ -54,16 +59,23 @@ class UserSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(UserProfileSerializer)
     def get_profile(self, obj):
         """返回用户扩展资料，不存在时自动补建。"""
         profile, _ = UserProfile.objects.get_or_create(user=obj)
         return UserProfileSerializer(profile).data
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_role_name(self, obj):
         """返回当前用户角色名称。"""
-        if obj.is_superuser or obj.is_staff:
+        if get_user_role(obj) == "admin":
             return "管理员"
         return "普通用户"
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_role(self, obj):
+        """返回当前用户角色标识。"""
+        return get_user_role(obj)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -193,6 +205,7 @@ class AdminUserListSerializer(serializers.ModelSerializer):
 
     profile = serializers.SerializerMethodField()
     role_name = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -203,6 +216,7 @@ class AdminUserListSerializer(serializers.ModelSerializer):
             "is_active",
             "is_staff",
             "is_superuser",
+            "role",
             "last_login",
             "date_joined",
             "role_name",
@@ -210,38 +224,61 @@ class AdminUserListSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
+    @extend_schema_field(UserProfileSerializer)
     def get_profile(self, obj):
         """返回扩展资料。"""
         profile, _ = UserProfile.objects.get_or_create(user=obj)
         return UserProfileSerializer(profile).data
 
+    @extend_schema_field(OpenApiTypes.STR)
     def get_role_name(self, obj):
         """返回角色文本。"""
-        if obj.is_superuser or obj.is_staff:
+        if get_user_role(obj) == "admin":
             return "管理员"
         return "普通用户"
+
+    @extend_schema_field(OpenApiTypes.STR)
+    def get_role(self, obj):
+        """返回角色标识。"""
+        return get_user_role(obj)
 
 
 class AdminUserUpdateSerializer(serializers.ModelSerializer):
     """管理员用户信息更新序列化器。"""
 
     nickname = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    role = serializers.ChoiceField(
+        choices=UserProfile.ROLE_CHOICES,
+        required=False,
+        write_only=True,
+    )
 
     class Meta:
         model = User
-        fields = ["email", "is_active", "is_staff", "nickname"]
+        fields = ["email", "is_active", "is_staff", "role", "nickname"]
 
     def update(self, instance, validated_data):
         """更新用户基础信息与扩展昵称。"""
         nickname = validated_data.pop("nickname", None)
+        role = validated_data.pop("role", None)
 
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
+        if role == "admin":
+            instance.is_staff = True
+        elif role == "user":
+            instance.is_staff = False
         instance.save()
 
-        if nickname is not None:
+        if nickname is not None or role is not None:
             profile, _ = UserProfile.objects.get_or_create(user=instance)
-            profile.nickname = nickname
-            profile.save(update_fields=["nickname", "updated_at"])
+            update_fields = ["updated_at"]
+            if nickname is not None:
+                profile.nickname = nickname
+                update_fields.append("nickname")
+            if role is not None:
+                profile.role = role
+                update_fields.append("role")
+            profile.save(update_fields=update_fields)
 
         return instance

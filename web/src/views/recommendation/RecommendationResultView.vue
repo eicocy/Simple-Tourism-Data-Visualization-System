@@ -14,6 +14,14 @@
         <el-button plain @click="goBack">返回重新推荐</el-button>
         <el-button plain @click="goVisualization">查看可视化</el-button>
         <el-button type="primary" @click="sortByScoreDesc">按得分排序</el-button>
+        <el-button
+          type="success"
+          :icon="Download"
+          :loading="exportLoading"
+          @click="handleExport"
+        >
+          导出 Excel
+        </el-button>
       </div>
     </section>
 
@@ -58,7 +66,13 @@
         :default-sort="{ prop: 'score', order: 'descending' }"
       >
         <el-table-column prop="rank" label="排名" width="80" align="center" />
-        <el-table-column prop="country_name" label="国家名称" min-width="140" />
+        <el-table-column prop="country_name" label="国家名称" min-width="140">
+          <template #default="scope">
+            <el-button link type="primary" @click="goCountryDetail(scope.row.country_id)">
+              {{ scope.row.country_name }}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column prop="score" label="综合得分" min-width="120" align="center" sortable />
         <el-table-column prop="tourism_index" label="旅游适宜指数" min-width="150" align="center" sortable>
           <template #default="scope">
@@ -93,7 +107,10 @@
 // 推荐结果展示页逻辑
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
+import { Download } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
 
+import { exportRecommendationExcelApi } from "@/api";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
 import { getStorage } from "@/utils/storage";
 
@@ -108,6 +125,9 @@ const resultYear = recommendationPayload.year || "--";
 
 // 原始结果列表
 const rawResults = recommendationPayload.results || [];
+
+// 导出按钮状态
+const exportLoading = ref(false);
 
 // 统一格式化数值字段
 function formatNumber(value) {
@@ -132,15 +152,19 @@ function normalizeTourismDetail(detail = {}) {
 // 表格数据，直接使用后端真实返回字段
 const tableData = ref(
   rawResults.map((item, index) => ({
+    country_id: item.country_id,
     rank: item.rank ?? index + 1,
     country_name: getLocalizedCountryName(item.country_name || item.country_name_en),
+    country_name_en: item.country_name_en || "",
     score: formatNumber(item.score),
     tourism_index: formatNumber(item.tourism_index),
     tourism_detail: normalizeTourismDetail(item.tourism_detail),
     safety_index: formatNumber(item.safety_index),
     safety_requirement: item.safety_requirement || "--",
+    safety_matched: item.safety_matched !== false,
     safety_matched_text: item.safety_matched === false ? "未完全满足" : "满足",
     ppp_index: formatNumber(item.ppp_index),
+    cost_index: formatNumber(item.cost_index ?? item.ppp_index),
     happiness_index: formatNumber(item.happiness_index),
     estimated_cost: item.estimated_cost || "--",
     continent: item.continent || "--",
@@ -163,6 +187,40 @@ function sortByScoreDesc() {
   });
 }
 
+function downloadBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+}
+
+async function handleExport() {
+  if (!tableData.value.length) {
+    ElMessage.warning("暂无可导出的推荐结果");
+    return;
+  }
+
+  exportLoading.value = true;
+  try {
+    const exportYear = resultYear === "--" ? "" : resultYear;
+    const blob = await exportRecommendationExcelApi({
+      year: exportYear,
+      results: tableData.value,
+    });
+    const filenameYear = exportYear || "当前";
+    downloadBlob(blob, `旅游推荐结果_${filenameYear}.xlsx`);
+    ElMessage.success("推荐结果 Excel 已导出");
+  } catch (error) {
+    ElMessage.error("导出失败，请稍后重试");
+  } finally {
+    exportLoading.value = false;
+  }
+}
+
 // 返回推荐输入页
 function goBack() {
   router.push("/app/recommendation");
@@ -171,6 +229,14 @@ function goBack() {
 // 跳转到可视化分析页
 function goVisualization() {
   router.push("/app/visualization");
+}
+
+function goCountryDetail(countryId) {
+  if (!countryId) {
+    ElMessage.warning("当前推荐结果缺少国家 ID");
+    return;
+  }
+  router.push(`/app/countries/${countryId}`);
 }
 
 // 页面初始化时默认按得分排序

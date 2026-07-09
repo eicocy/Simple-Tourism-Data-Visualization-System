@@ -9,3 +9,25 @@ export function getRecommendationApi(data) {
     data,
   });
 }
+
+// 导出推荐结果 Excel
+export function exportRecommendationExcelApi(data, config = {}) {
+  return request({
+    url: "/recommendation/export/",
+    method: "post",
+    data,
+    responseType: "blob",
+    timeout: 30000,
+    ...config,
+  });
+}
+
+// 获取单个国家 AI 推荐说明
+export function getRecommendationExplanationApi(countryId, config = {}) {
+  return request({
+    url: `/recommendation/explanation/${countryId}/`,
+    method: "get",
+    timeout: 30000,
+    ...config,
+  });
+}

@@ -47,6 +47,7 @@ const routes = [
         meta: {
           title: "旅游推荐",
           requiresAuth: true,
+          roles: ["user", "admin"],
         },
       },
       {
@@ -56,6 +57,7 @@ const routes = [
         meta: {
           title: "推荐结果",
           requiresAuth: true,
+          roles: ["user", "admin"],
         },
       },
       {
@@ -65,6 +67,7 @@ const routes = [
         meta: {
           title: "可视化分析",
           requiresAuth: true,
+          roles: ["user", "admin"],
         },
       },
       {
@@ -74,6 +77,7 @@ const routes = [
         meta: {
           title: "国家指标分析",
           requiresAuth: true,
+          roles: ["admin"],
         },
       },
       {
@@ -83,6 +87,7 @@ const routes = [
         meta: {
           title: "国家详情",
           requiresAuth: true,
+          roles: ["admin"],
         },
       },
       {
@@ -92,6 +97,7 @@ const routes = [
         meta: {
           title: "算法说明",
           requiresAuth: true,
+          roles: ["admin"],
         },
       },
       {
@@ -102,6 +108,18 @@ const routes = [
           title: "管理员中心",
           requiresAuth: true,
           requiresAdmin: true,
+          roles: ["admin"],
+        },
+      },
+      {
+        path: "admin/logs",
+        name: "operation-logs",
+        component: () => import("@/views/admin/OperationLogView.vue"),
+        meta: {
+          title: "操作日志",
+          requiresAuth: true,
+          requiresAdmin: true,
+          roles: ["admin"],
         },
       },
     ],
@@ -167,6 +185,13 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta?.requiresAdmin && !userStore.isAdmin) {
     next("/app/recommendation");
+    return;
+  }
+
+  const allowedRoles = to.meta?.roles || [];
+  const currentRole = userStore.isAdmin ? "admin" : "user";
+  if (allowedRoles.length && !allowedRoles.includes(currentRole)) {
+    next(userStore.isAdmin ? "/app/admin" : "/app/recommendation");
     return;
   }
 

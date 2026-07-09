@@ -1,6 +1,9 @@
 # Django 后端基础依赖
 Django>=4.2,<5.0
 djangorestframework>=3.14,<4.0
+djangorestframework-simplejwt>=5.3,<6.0
+drf-spectacular>=0.27,<1.0
 django-cors-headers>=4.3,<5.0
 mysqlclient>=2.2,<3.0
 python-dotenv>=1.0,<2.0
+openpyxl>=3.1,<4.0

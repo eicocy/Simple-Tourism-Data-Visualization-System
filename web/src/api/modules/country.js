@@ -27,6 +27,23 @@ export function getCountryIndicatorListApi(params) {
   });
 }
 
+// 上传 Excel 批量导入国家指标数据
+export function uploadCountryIndicatorExcelApi(file, payload = {}, config = {}) {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (payload.year) {
+    formData.append("year", payload.year);
+  }
+
+  return request({
+    url: "/countries/indicators/import-excel/",
+    method: "post",
+    data: formData,
+    timeout: 30000,
+    ...config,
+  });
+}
+
 // 查询首页世界地图所需的最新国家指标数据
 export function getCountryMapDataApi() {
   return request({

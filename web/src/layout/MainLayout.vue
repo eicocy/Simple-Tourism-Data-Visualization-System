@@ -22,12 +22,12 @@
       <!-- 侧边导航：根据用户角色展示功能入口 -->
       <aside class="sidebar">
         <el-menu :default-active="activeMenu" class="menu-panel" router>
-          <el-menu-item index="/">地图首页</el-menu-item>
           <el-menu-item index="/app/recommendation">旅游推荐</el-menu-item>
           <el-menu-item index="/app/visualization">可视化分析</el-menu-item>
-          <el-menu-item index="/app/countries">国家指标分析</el-menu-item>
-          <el-menu-item index="/app/algorithm">算法说明</el-menu-item>
+          <el-menu-item v-if="userStore.isAdmin" index="/app/countries">国家指标分析</el-menu-item>
+          <el-menu-item v-if="userStore.isAdmin" index="/app/algorithm">算法说明</el-menu-item>
           <el-menu-item v-if="userStore.isAdmin" index="/app/admin">管理员中心</el-menu-item>
+          <el-menu-item v-if="userStore.isAdmin" index="/app/admin/logs">操作日志</el-menu-item>
         </el-menu>
       </aside>
 

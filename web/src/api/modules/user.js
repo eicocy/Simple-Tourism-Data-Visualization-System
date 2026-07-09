@@ -20,6 +20,16 @@ export function loginApi(data, config = {}) {
   });
 }
 
+// JWT 刷新接口
+export function refreshTokenApi(refresh, config = {}) {
+  return request({
+    url: "/users/token/refresh/",
+    method: "post",
+    data: { refresh },
+    ...config,
+  });
+}
+
 // 用户注册接口
 export function registerApi(data, config = {}) {
   return request({
@@ -72,6 +82,15 @@ export function changePasswordApi(data, config = {}) {
 export function getAdminSummaryApi(config = {}) {
   return request({
     url: "/users/admin/summary/",
+    method: "get",
+    ...config,
+  });
+}
+
+// 管理员统计报表接口
+export function getAdminReportApi(config = {}) {
+  return request({
+    url: "/users/admin/report/",
     method: "get",
     ...config,
   });

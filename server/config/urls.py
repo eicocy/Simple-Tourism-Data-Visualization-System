@@ -5,6 +5,11 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 
 def health_check(_request):
@@ -18,11 +23,19 @@ def health_check(_request):
 
 
 urlpatterns = [
-    # Django 后台管理路由
     path("admin/", admin.site.urls),
-    # 基础健康检查路由
     path("api/health/", health_check, name="health_check"),
-    # 各业务模块总入口，当前仅挂载占位路由
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
     path("api/users/", include("apps.users.urls")),
     path("api/countries/", include("apps.countries.urls")),
     path("api/recommendation/", include("apps.recommendation.urls")),
@@ -30,6 +43,5 @@ urlpatterns = [
     path("api/system/", include("apps.system.urls")),
 ]
 
-# 开发环境下提供媒体文件访问
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

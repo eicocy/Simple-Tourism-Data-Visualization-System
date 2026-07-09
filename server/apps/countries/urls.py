@@ -8,6 +8,7 @@ from apps.countries.views import (
     CountryContinentStatsAPIView,
     CountryDetailAPIView,
     CountryInsightDetailAPIView,
+    CountryIndicatorImportExcelAPIView,
     CountryIndicatorListAPIView,
     CountryListAPIView,
     LatestCountryMapDataAPIView,
@@ -24,6 +25,12 @@ urlpatterns = [
     path("", CountryListAPIView.as_view(), name="country-list"),
     # 国家指标数据查询接口
     path("indicators/", CountryIndicatorListAPIView.as_view(), name="country-indicator-list"),
+    # 国家指标 Excel 批量导入接口
+    path(
+        "indicators/import-excel/",
+        CountryIndicatorImportExcelAPIView.as_view(),
+        name="country-indicator-import-excel",
+    ),
     # 首页世界地图所需数据接口
     path("map-data/", LatestCountryMapDataAPIView.as_view(), name="country-map-data"),
     # 按洲别统计分析接口

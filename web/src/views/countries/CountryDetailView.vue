@@ -57,6 +57,51 @@
       </article>
     </section>
 
+    <!-- AI 推荐说明 -->
+    <section class="panel ai-panel" v-loading="aiLoading">
+      <div class="panel-header ai-header">
+        <div>
+          <h3>AI 推荐说明</h3>
+          <p>
+            根据该国家最新指标生成推荐理由、安全提醒、消费水平说明和适合人群。
+            <el-tag size="small" :type="aiMeta.is_ai_generated ? 'success' : 'info'">
+              {{ aiSourceText }}
+            </el-tag>
+          </p>
+        </div>
+        <el-button type="primary" plain :loading="aiLoading" @click="loadAiExplanation">
+          重新生成
+        </el-button>
+      </div>
+
+      <el-empty v-if="!aiExplanation.summary && !aiLoading" description="暂无推荐说明">
+        <el-button type="primary" @click="loadAiExplanation">生成说明</el-button>
+      </el-empty>
+
+      <div v-else class="ai-grid">
+        <article class="ai-card">
+          <span>推荐理由</span>
+          <p>{{ aiExplanation.recommendation_reason || "--" }}</p>
+        </article>
+        <article class="ai-card">
+          <span>安全提醒</span>
+          <p>{{ aiExplanation.safety_notice || "--" }}</p>
+        </article>
+        <article class="ai-card">
+          <span>消费水平说明</span>
+          <p>{{ aiExplanation.cost_description || "--" }}</p>
+        </article>
+        <article class="ai-card">
+          <span>适合人群</span>
+          <p>{{ aiExplanation.target_people || "--" }}</p>
+        </article>
+        <article class="ai-card summary">
+          <span>综合结论</span>
+          <p>{{ aiExplanation.summary || "--" }}</p>
+        </article>
+      </div>
+    </section>
+
     <!-- 指标明细说明 -->
     <section class="panel">
       <div class="panel-header">
@@ -96,7 +141,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 
-import { getCountryInsightDetailApi } from "@/api";
+import { getCountryInsightDetailApi, getRecommendationExplanationApi } from "@/api";
 import echarts from "@/plugins/echarts";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
 
@@ -107,6 +152,13 @@ const loading = ref(false);
 const country = ref({});
 const indicator = ref({});
 const tourismDetail = ref({});
+const aiLoading = ref(false);
+const aiExplanation = ref({});
+const aiMeta = ref({
+  provider: "local",
+  source: "template",
+  is_ai_generated: false,
+});
 const radarChartRef = ref(null);
 const tourismChartRef = ref(null);
 
@@ -116,6 +168,16 @@ let tourismChart = null;
 // 国家显示名优先使用中文，缺失时再使用英文名称映射
 const displayName = computed(() => {
   return getLocalizedCountryName(country.value.name_zh || country.value.name_en);
+});
+
+const aiSourceText = computed(() => {
+  if (aiMeta.value.source === "local_llm") {
+    return `本地模型：${aiMeta.value.provider}`;
+  }
+  if (aiMeta.value.source === "remote") {
+    return `云端 AI：${aiMeta.value.provider}`;
+  }
+  return "本地模板";
 });
 
 // 消费友好度用于雷达图，消费指数越低代表成本越友好
@@ -148,10 +210,36 @@ async function loadDetail() {
     indicator.value = result.data?.latest_indicator || {};
     tourismDetail.value = indicator.value.tourism_detail || {};
     renderCharts();
+    loadAiExplanation();
   } catch (error) {
     ElMessage.error("国家详情加载失败，请检查该国家是否存在指标数据");
   } finally {
     loading.value = false;
+  }
+}
+
+async function loadAiExplanation() {
+  aiLoading.value = true;
+  try {
+    const result = await getRecommendationExplanationApi(route.params.id, {
+      silentError: true,
+    });
+    aiExplanation.value = result.data?.explanation || {};
+    aiMeta.value = {
+      provider: result.data?.provider || "local",
+      source: result.data?.source || "template",
+      is_ai_generated: Boolean(result.data?.is_ai_generated),
+    };
+  } catch (error) {
+    aiExplanation.value = {};
+    aiMeta.value = {
+      provider: "local",
+      source: "template",
+      is_ai_generated: false,
+    };
+    ElMessage.error("推荐说明生成失败，请稍后重试");
+  } finally {
+    aiLoading.value = false;
   }
 }
 
@@ -357,18 +445,62 @@ onBeforeUnmount(() => {
   font-size: 20px;
 }
 
+.ai-panel {
+  border-color: #c9def6;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.ai-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ai-card {
+  padding: 16px;
+  border: 1px solid #dbe8f7;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.ai-card.summary {
+  grid-column: 1 / -1;
+}
+
+.ai-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: #2f72c8;
+  font-weight: 700;
+}
+
+.ai-card p {
+  margin: 0;
+  color: #405469;
+  line-height: 1.8;
+}
+
 .chart-box {
   height: 340px;
 }
 
 @media (max-width: 980px) {
-  .page-hero {
+  .page-hero,
+  .ai-header {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .summary-grid,
-  .content-grid {
+  .content-grid,
+  .ai-grid {
     grid-template-columns: 1fr;
   }
 }

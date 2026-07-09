@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 
@@ -40,6 +41,7 @@ DJANGO_APPS = [
 THIRD_PARTY_APPS = [
     "rest_framework",
     "rest_framework.authtoken",
+    "drf_spectacular",
     "corsheaders",
 ]
 
@@ -139,6 +141,22 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# AI 推荐说明配置
+AI_RECOMMENDATION_PROVIDER = os.getenv("AI_RECOMMENDATION_PROVIDER", "local").lower()
+AI_RECOMMENDATION_TIMEOUT = int(os.getenv("AI_RECOMMENDATION_TIMEOUT", "12"))
+
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
+DEEPSEEK_API_BASE_URL = os.getenv("DEEPSEEK_API_BASE_URL", "https://api.deepseek.com")
+DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-v4-flash")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_BASE_URL = os.getenv("OPENAI_API_BASE_URL", "https://api.openai.com/v1")
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini")
+
+LOCAL_LLM_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:11434")
+LOCAL_LLM_MODEL = os.getenv("LOCAL_LLM_MODEL", "qwen2.5:7b")
+LOCAL_LLM_API_KEY = os.getenv("LOCAL_LLM_API_KEY", "not-needed")
+
 # 默认主键类型
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -167,13 +185,41 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Django REST framework 基础配置
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
-        "rest_framework.authentication.BasicAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 10,
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "安全旅游国家推荐与可视化系统 API",
+    "DESCRIPTION": (
+        "本接口文档覆盖用户登录认证、国家数据管理、推荐算法、"
+        "后台统计报表、Excel 导入导出和操作日志等接口。"
+    ),
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,
+        "displayRequestDuration": True,
+        "filter": True,
+    },
+    "TAGS": [
+        {"name": "认证与用户", "description": "登录、注册、JWT 刷新和用户资料接口"},
+        {"name": "国家数据", "description": "国家基础数据、指标数据和地图数据接口"},
+        {"name": "推荐算法", "description": "旅游国家推荐、AI 推荐说明和推荐结果导出接口"},
+        {"name": "后台统计", "description": "管理员首页统计报表和用户管理接口"},
+        {"name": "系统管理", "description": "操作日志等系统管理接口"},
+    ],
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "AUTH_HEADER_TYPES": ("Bearer",),
 }

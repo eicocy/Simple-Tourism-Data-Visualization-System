@@ -11,6 +11,11 @@ User = get_user_model()
 class UserProfile(models.Model):
     """用户扩展信息表。"""
 
+    ROLE_CHOICES = (
+        ("user", "普通用户"),
+        ("admin", "管理员"),
+    )
+
     GENDER_CHOICES = (
         ("male", "男"),
         ("female", "女"),
@@ -24,6 +29,14 @@ class UserProfile(models.Model):
         related_name="profile",
         verbose_name="关联用户",
         help_text="关联 Django 内置用户表中的用户记录",
+    )
+    # 系统角色，用于前后端权限控制
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default="user",
+        verbose_name="用户角色",
+        help_text="系统角色，普通用户为 user，管理员为 admin。",
     )
     # 用户昵称，用于页面展示
     nickname = models.CharField(
