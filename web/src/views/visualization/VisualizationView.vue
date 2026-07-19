@@ -1,30 +1,28 @@
-﻿<template>
+<template>
   <div class="visualization-page">
-    <!-- 页面头部说明区域 -->
     <section class="page-hero">
       <div>
-        <p class="hero-tag">Visualization</p>
-        <h2>推荐结果可视化分析</h2>
+        <p class="hero-tag">Visualization Agent</p>
+        <h2>智能问答地图与推荐结果可视化</h2>
         <p class="hero-desc">
-          本页面使用 ECharts 对推荐结果进行图形化展示，便于观察不同国家的综合得分与指标差异，
-          当前图表已纳入旅游适宜指数，能够更直观地体现旅游目的地特征。
+          通过对话识别风险查询和风景偏好，自动改变世界地图国家标注，并给出目的地文字详情、
+          不推荐理由或推荐说明。下方继续保留推荐结果图表分析。
         </p>
       </div>
       <div class="hero-actions">
         <el-button plain @click="goRecommendation">返回推荐页</el-button>
-        <el-button type="primary" @click="renderCharts">刷新图表</el-button>
+        <el-button type="primary" @click="refreshAllCharts">刷新可视化</el-button>
       </div>
     </section>
 
-    <!-- 数据摘要信息 -->
     <section class="summary-grid">
       <article class="summary-card">
         <span class="summary-label">结果数量</span>
         <strong>{{ chartData.length }}</strong>
       </article>
       <article class="summary-card">
-        <span class="summary-label">最高综合得分</span>
-        <strong>{{ maxScore }}</strong>
+        <span class="summary-label">地图覆盖国家</span>
+        <strong>{{ worldMapData.length }}</strong>
       </article>
       <article class="summary-card">
         <span class="summary-label">当前数据来源</span>
@@ -32,7 +30,88 @@
       </article>
     </section>
 
-    <!-- 图表区域 -->
+    <section class="agent-layout">
+      <article class="map-card">
+        <div class="card-header map-card-header">
+          <div>
+            <h3>智能地图标注</h3>
+            <p>风险查询会标红国家，风景推荐会高亮候选目的地。</p>
+          </div>
+          <el-tag :type="agentTargets.length ? activeTagType : 'info'">
+            {{ agentTargets.length ? `${agentTargets.length} 个标注` : "等待提问" }}
+          </el-tag>
+        </div>
+
+        <el-empty
+          v-if="!worldMapData.length && !mapLoading"
+          description="暂无地图数据，请先导入国家指标数据"
+        />
+        <div v-show="worldMapData.length" ref="worldMapRef" class="world-map-box"></div>
+      </article>
+
+      <article class="agent-card">
+        <div class="card-header">
+          <div>
+            <h3>地图问答助手</h3>
+            <p>示例：现在哪里有战事？哪里有传染病流行？我想去看欧洲的山。</p>
+          </div>
+        </div>
+
+        <div class="quick-question-row">
+          <el-button
+            v-for="question in quickQuestions"
+            :key="question"
+            size="small"
+            plain
+            @click="sendAgentQuestion(question)"
+          >
+            {{ question }}
+          </el-button>
+        </div>
+
+        <div class="chat-window">
+          <div
+            v-for="(message, index) in agentMessages"
+            :key="index"
+            class="chat-message"
+            :class="message.role"
+          >
+            <span>{{ message.content }}</span>
+          </div>
+        </div>
+
+        <div class="agent-input-row">
+          <el-input
+            v-model="agentInput"
+            placeholder="输入你的地图问题"
+            clearable
+            @keyup.enter="sendAgentQuestion()"
+          />
+          <el-button type="primary" :loading="agentLoading" @click="sendAgentQuestion()">
+            发送
+          </el-button>
+        </div>
+
+        <div v-if="agentTargets.length" class="target-list">
+          <div
+            v-for="target in agentTargets"
+            :key="`${target.country_id}-${target.category}`"
+            class="target-item"
+            :class="target.category"
+          >
+            <div class="target-title-row">
+              <strong>{{ target.country_name }}</strong>
+              <el-tag size="small" :type="target.category === 'risk' ? 'danger' : 'success'">
+                {{ target.category === "risk" ? "风险标红" : "推荐高亮" }}
+              </el-tag>
+            </div>
+            <p>{{ target.detail }}</p>
+            <p class="target-reason">{{ target.reason }}</p>
+          </div>
+        </div>
+      </article>
+    </section>
+
     <section class="chart-grid">
       <article class="chart-card">
         <div class="card-header">
@@ -55,7 +134,6 @@
       </article>
     </section>
 
-    <!-- 表格辅助说明区域 -->
     <section class="table-card">
       <div class="card-header">
         <div>
@@ -66,18 +144,12 @@
 
       <el-empty
         v-if="!chartData.length"
-        description="暂无推荐结果数据，请先完成推荐操作后再查看可视化页面"
+        description="暂无推荐结果数据，请先完成推荐操作后再查看推荐图表"
       >
         <el-button type="primary" @click="goRecommendation">前往推荐页</el-button>
       </el-empty>
 
-      <el-table
-        v-else
-        :data="chartData"
-        border
-        stripe
-        style="width: 100%"
-      >
+      <el-table v-else :data="chartData" border stripe style="width: 100%">
         <el-table-column prop="country_name" label="国家名称" min-width="140" />
         <el-table-column prop="score" label="综合得分" min-width="100" align="center" />
         <el-table-column prop="tourism_index" label="旅游适宜指数" min-width="120" align="center" />
@@ -96,30 +168,48 @@
 </template>
 
 <script setup>
-// 推荐结果可视化页面逻辑
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 
+import { chatWithMapAgentApi, getCountryMapDataApi } from "@/api";
 import echarts from "@/plugins/echarts";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
 import { getStorage } from "@/utils/storage";
 
-// 路由实例，用于页面跳转
 const router = useRouter();
 
-// 图表 DOM 引用
 const barChartRef = ref(null);
 const radarChartRef = ref(null);
+const worldMapRef = ref(null);
 
-// 图表实例引用，便于页面卸载时销毁
 let barChartInstance = null;
 let radarChartInstance = null;
+let worldMapInstance = null;
 
-// 从本地缓存中读取推荐结果
 const recommendationPayload = getStorage("recommendation_result_payload") || {};
 const rawResults = recommendationPayload.results || [];
 
-// 统一格式化数值字段
+const mapLoading = ref(false);
+const worldMapData = ref([]);
+const latestMapYear = ref("--");
+const agentInput = ref("");
+const agentLoading = ref(false);
+const agentTargets = ref([]);
+const activeAgentResult = ref(null);
+const agentMessages = ref([
+  {
+    role: "assistant",
+    content: "你可以问我“现在哪里有战事？”、“哪里有传染病流行？”或“我想去看欧洲的山”。",
+  },
+]);
+
+const quickQuestions = ["现在哪里有战事？", "哪里有传染病流行？", "我想去看欧洲的山"];
+const WORLD_MAP_SCRIPT_URLS = [
+  "https://cdn.jsdelivr.net/npm/echarts-maps@1.1.0/world.js",
+  "https://unpkg.com/echarts-maps@1.1.0/world.js",
+];
+
 function formatNumber(value) {
   const numericValue = Number(value);
   if (Number.isNaN(numericValue)) {
@@ -128,7 +218,18 @@ function formatNumber(value) {
   return Number(numericValue.toFixed(2));
 }
 
-// 将推荐结果转换成图表和表格统一使用的数据结构
+function normalizeMapName(name) {
+  const aliasMap = {
+    USA: "United States of America",
+    "United States": "United States of America",
+    UAE: "United Arab Emirates",
+    UK: "United Kingdom",
+    "South Korea": "Korea",
+    Vietnam: "Vietnam",
+  };
+  return aliasMap[name] || name;
+}
+
 const chartData = ref(
   rawResults.map((item) => ({
     tourism_detail: item.tourism_detail || {},
@@ -147,20 +248,226 @@ const chartData = ref(
   })),
 );
 
-// 计算最高得分
-const maxScore = computed(() => {
-  if (!chartData.value.length) {
-    return "--";
-  }
-  return Math.max(...chartData.value.map((item) => Number(item.score) || 0)).toFixed(2);
+const agentTargetMap = computed(() => {
+  const targetMap = new Map();
+  agentTargets.value.forEach((target) => {
+    targetMap.set(normalizeMapName(target.country_name_en), target);
+  });
+  return targetMap;
 });
 
-// 数据来源说明
 const dataSourceText = computed(() => {
-  return chartData.value.length ? "后端推荐接口真实数据" : "暂无可视化数据";
+  if (activeAgentResult.value?.is_ai_generated) {
+    return "国家指标 + 大模型润色";
+  }
+  if (worldMapData.value.length) {
+    return `国家指标数据库（${latestMapYear.value || "--"}）`;
+  }
+  return "暂无可视化数据";
 });
 
-// 渲染柱状图
+const activeTagType = computed(() => {
+  return agentTargets.value.some((item) => item.category === "risk") ? "danger" : "success";
+});
+
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const existedScript = document.querySelector(`script[src="${url}"]`);
+    if (existedScript) {
+      resolve();
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = url;
+    script.async = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureWorldMapRegistered() {
+  if (echarts.getMap("world")) {
+    return;
+  }
+
+  window.echarts = echarts;
+  let lastError = null;
+  for (const url of WORLD_MAP_SCRIPT_URLS) {
+    try {
+      await loadScript(url);
+      if (echarts.getMap("world")) {
+        return;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError || new Error("世界地图加载失败");
+}
+
+async function loadWorldMapData() {
+  mapLoading.value = true;
+  try {
+    const result = await getCountryMapDataApi();
+    const results = result?.data?.results || [];
+    latestMapYear.value = result?.data?.year || "--";
+    worldMapData.value = results
+      .filter((item) => item.country_name_en)
+      .map((item) => ({
+        name: normalizeMapName(item.country_name_en),
+        value: Number(item.recommendation_index ?? 0),
+        country_id: item.country_id,
+        country_name: item.country_name,
+        country_name_en: item.country_name_en,
+        tourism_index: Number(item.tourism_index ?? 0),
+        tourism_detail: item.tourism_detail || {},
+        safety_index: Number(item.safety_index ?? 0),
+        ppp_index: Number(item.ppp_index ?? 0),
+        happiness_index: Number(item.happiness_index ?? 0),
+      }));
+  } finally {
+    mapLoading.value = false;
+  }
+}
+
+function getTargetColor(target) {
+  if (!target) {
+    return null;
+  }
+  return target.category === "risk" ? "#d94d45" : "#2f9b72";
+}
+
+function buildWorldMapSeriesData() {
+  return worldMapData.value.map((item) => {
+    const target = agentTargetMap.value.get(item.name);
+    const targetColor = getTargetColor(target);
+    if (!targetColor) {
+      return item;
+    }
+
+    return {
+      ...item,
+      agent_target: target,
+      itemStyle: {
+        areaColor: targetColor,
+        borderColor: "#ffffff",
+        borderWidth: 1.4,
+      },
+    };
+  });
+}
+
+async function renderWorldMap() {
+  if (!worldMapRef.value || !worldMapData.value.length) {
+    return;
+  }
+
+  await ensureWorldMapRegistered();
+
+  if (worldMapInstance) {
+    worldMapInstance.dispose();
+  }
+
+  worldMapInstance = echarts.init(worldMapRef.value);
+  worldMapInstance.setOption({
+    backgroundColor: "transparent",
+    tooltip: {
+      trigger: "item",
+      formatter: (params) => {
+        const data = params.data || {};
+        const target = data.agent_target;
+        const lines = [
+          data.country_name || params.name,
+          `推荐指数：${params.value ?? "暂无数据"}`,
+          `旅游适宜指数：${data.tourism_index ?? "--"}`,
+          `安全指数：${data.safety_index ?? "--"}`,
+          `PPP 指数：${data.ppp_index ?? "--"}`,
+          `幸福指数：${data.happiness_index ?? "--"}`,
+        ];
+        if (target) {
+          lines.push(`标注：${target.title}`);
+          lines.push(target.detail);
+          lines.push(target.reason);
+        }
+        return lines.join("<br/>");
+      },
+    },
+    visualMap: {
+      min: 0,
+      max: 100,
+      text: ["高", "低"],
+      calculable: true,
+      orient: "vertical",
+      right: 22,
+      bottom: 24,
+      textStyle: {
+        color: "#53635e",
+      },
+      inRange: {
+        color: ["#eef4f1", "#cfe3d9", "#8dbda8", "#3e8267"],
+      },
+    },
+    series: [
+      {
+        name: "推荐指数",
+        type: "map",
+        map: "world",
+        roam: true,
+        zoom: 1.12,
+        emphasis: {
+          label: {
+            show: true,
+            color: "#ffffff",
+            formatter: (params) => params.data?.country_name || params.name,
+          },
+          itemStyle: {
+            areaColor: "#d9af6b",
+          },
+        },
+        itemStyle: {
+          areaColor: "#edf5f1",
+          borderColor: "rgba(78, 118, 103, 0.55)",
+          borderWidth: 1,
+        },
+        data: buildWorldMapSeriesData(),
+      },
+    ],
+  });
+}
+
+async function sendAgentQuestion(question = agentInput.value) {
+  const messageText = String(question || "").trim();
+  if (!messageText || agentLoading.value) {
+    return;
+  }
+
+  agentInput.value = "";
+  agentMessages.value.push({ role: "user", content: messageText });
+  agentLoading.value = true;
+
+  try {
+    const result = await chatWithMapAgentApi({ message: messageText });
+    const data = result?.data || {};
+    activeAgentResult.value = data;
+    agentTargets.value = data.map_targets || [];
+    agentMessages.value.push({
+      role: "assistant",
+      content: data.answer || "已完成地图标注。",
+    });
+    await nextTick();
+    await renderWorldMap();
+  } catch (error) {
+    if (!error?.response) {
+      ElMessage.error("智能地图助手暂时无法连接后端服务");
+    }
+  } finally {
+    agentLoading.value = false;
+  }
+}
+
 function renderBarChart() {
   if (!barChartRef.value || !chartData.value.length) {
     return;
@@ -215,7 +522,6 @@ function renderBarChart() {
   });
 }
 
-// 渲染雷达图
 function renderRadarChart() {
   if (!radarChartRef.value || !chartData.value.length) {
     return;
@@ -225,9 +531,7 @@ function renderRadarChart() {
     radarChartInstance.dispose();
   }
 
-  const radarSource = [...chartData.value]
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 3);
+  const radarSource = [...chartData.value].sort((a, b) => b.score - a.score).slice(0, 3);
 
   radarChartInstance = echarts.init(radarChartRef.value);
   radarChartInstance.setOption({
@@ -267,7 +571,6 @@ function renderRadarChart() {
   });
 }
 
-// 统一渲染图表
 function renderCharts() {
   nextTick(() => {
     renderBarChart();
@@ -275,24 +578,35 @@ function renderCharts() {
   });
 }
 
-// 返回推荐页
+async function refreshAllCharts() {
+  await loadWorldMapData();
+  await nextTick();
+  await renderWorldMap();
+  renderCharts();
+}
+
 function goRecommendation() {
   router.push("/app/recommendation");
 }
 
-// 图表自适应函数
 function handleResize() {
   barChartInstance?.resize();
   radarChartInstance?.resize();
+  worldMapInstance?.resize();
 }
 
-// 页面挂载时渲染图表
-onMounted(() => {
+onMounted(async () => {
   renderCharts();
+  try {
+    await loadWorldMapData();
+    await nextTick();
+    await renderWorldMap();
+  } catch (error) {
+    ElMessage.error("世界地图加载失败，请检查地图接口或网络后刷新页面");
+  }
   window.addEventListener("resize", handleResize);
 });
 
-// 页面卸载前销毁图表实例和事件监听
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
 
@@ -303,6 +617,10 @@ onBeforeUnmount(() => {
   if (radarChartInstance) {
     radarChartInstance.dispose();
     radarChartInstance = null;
+  }
+  if (worldMapInstance) {
+    worldMapInstance.dispose();
+    worldMapInstance = null;
   }
 });
 </script>
@@ -340,7 +658,7 @@ onBeforeUnmount(() => {
 
 .hero-desc {
   margin: 0;
-  max-width: 760px;
+  max-width: 820px;
   line-height: 1.7;
   color: rgba(247, 251, 252, 0.86);
 }
@@ -372,7 +690,13 @@ onBeforeUnmount(() => {
 
 .summary-card strong {
   color: #21443c;
-  font-size: 28px;
+  font-size: 26px;
+}
+
+.agent-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
+  gap: 20px;
 }
 
 .chart-grid {
@@ -381,12 +705,21 @@ onBeforeUnmount(() => {
   gap: 20px;
 }
 
+.map-card,
+.agent-card,
 .chart-card,
 .table-card {
   padding: 24px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: 0 12px 32px rgba(24, 43, 38, 0.08);
+}
+
+.map-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
 }
 
 .card-header {
@@ -404,9 +737,118 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
+.world-map-box {
+  width: 100%;
+  height: 520px;
+  min-height: 420px;
+}
+
+.quick-question-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chat-window {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  height: 220px;
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid rgba(86, 115, 105, 0.16);
+  border-radius: 14px;
+  background: #f7faf8;
+}
+
+.chat-message {
+  display: flex;
+}
+
+.chat-message span {
+  max-width: 90%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.chat-message.assistant span {
+  color: #28473f;
+  background: #ffffff;
+  border: 1px solid rgba(76, 115, 101, 0.12);
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.user span {
+  color: #ffffff;
+  background: #2f6b5a;
+}
+
+.agent-input-row {
+  display: grid;
+  grid-template-columns: 1fr 76px;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.target-list {
+  display: grid;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+
+.target-item {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(69, 120, 101, 0.18);
+  background: #f9fbfa;
+}
+
+.target-item.risk {
+  border-color: rgba(217, 77, 69, 0.28);
+  background: #fff7f6;
+}
+
+.target-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.target-title-row strong {
+  color: #28473f;
+}
+
+.target-item p {
+  margin: 0 0 8px;
+  color: #5d6d67;
+  line-height: 1.55;
+  font-size: 13px;
+}
+
+.target-reason {
+  color: #334d45;
+}
+
 .chart-box {
   width: 100%;
   height: 380px;
+}
+
+@media (max-width: 1180px) {
+  .agent-layout,
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 980px) {
@@ -415,16 +857,27 @@ onBeforeUnmount(() => {
     align-items: flex-start;
   }
 
-  .summary-grid,
-  .chart-grid {
+  .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .world-map-box {
+    height: 460px;
   }
 }
 
 @media (max-width: 640px) {
-  .hero-actions {
+  .hero-actions,
+  .agent-input-row {
+    grid-template-columns: 1fr;
     flex-direction: column;
     width: 100%;
+  }
+
+  .map-card-header,
+  .target-title-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
