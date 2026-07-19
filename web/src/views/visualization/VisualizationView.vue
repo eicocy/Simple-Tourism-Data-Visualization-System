@@ -53,7 +53,6 @@
         <div class="card-header">
           <div>
             <h3>地图问答助手</h3>
-            <p>示例：现在哪里有战事？哪里有传染病流行？我想去看欧洲的山。</p>
           </div>
         </div>
 
@@ -333,46 +332,45 @@ async function loadWorldMapData() {
   }
 }
 
-function getTargetColor(target) {
-  if (!target) {
-    return null;
-  }
-  return target.category === "risk" ? "#d94d45" : "#2f9b72";
-}
-
 function buildWorldMapSeriesData() {
   return worldMapData.value.map((item) => {
     const target = agentTargetMap.value.get(item.name);
-    const targetColor = getTargetColor(target);
-    if (!targetColor) {
+    if (!target) {
       return item;
     }
 
+    const isRisk = target.category === "risk";
     return {
       ...item,
+      value: 100,
       agent_target: target,
       itemStyle: {
-        areaColor: targetColor,
+        areaColor: isRisk ? "#e60012" : "#ff8a00",
         borderColor: "#ffffff",
-        borderWidth: 1.4,
+        borderWidth: 2.8,
+        shadowBlur: 18,
+        shadowColor: isRisk ? "rgba(230, 0, 18, 0.72)" : "rgba(255, 138, 0, 0.68)",
+      },
+      emphasis: {
+        itemStyle: {
+          areaColor: isRisk ? "#b40000" : "#d66b00",
+          borderColor: "#ffffff",
+          borderWidth: 3.2,
+        },
+      },
+      label: {
+        show: true,
+        color: "#ffffff",
+        fontWeight: 700,
+        formatter: item.country_name,
       },
     };
   });
 }
 
-async function renderWorldMap() {
-  if (!worldMapRef.value || !worldMapData.value.length) {
-    return;
-  }
-
-  await ensureWorldMapRegistered();
-
-  if (worldMapInstance) {
-    worldMapInstance.dispose();
-  }
-
-  worldMapInstance = echarts.init(worldMapRef.value);
-  worldMapInstance.setOption({
+function buildWorldMapOption() {
+  const hasAgentTargets = agentTargets.value.length > 0;
+  const option = {
     backgroundColor: "transparent",
     tooltip: {
       trigger: "item",
@@ -395,7 +393,35 @@ async function renderWorldMap() {
         return lines.join("<br/>");
       },
     },
-    visualMap: {
+    series: [
+      {
+        name: "推荐指数",
+        type: "map",
+        map: "world",
+        roam: false,
+        zoom: 1.12,
+        emphasis: {
+          label: {
+            show: true,
+            color: "#ffffff",
+            formatter: (params) => params.data?.country_name || params.name,
+          },
+          itemStyle: {
+            areaColor: "#d9af6b",
+          },
+        },
+        itemStyle: {
+          areaColor: hasAgentTargets ? "#dfe8e4" : "#edf5f1",
+          borderColor: hasAgentTargets ? "rgba(106, 126, 120, 0.55)" : "rgba(78, 118, 103, 0.55)",
+          borderWidth: 1,
+        },
+        data: buildWorldMapSeriesData(),
+      },
+    ],
+  };
+
+  if (!hasAgentTargets) {
+    option.visualMap = {
       min: 0,
       max: 100,
       text: ["高", "低"],
@@ -409,33 +435,25 @@ async function renderWorldMap() {
       inRange: {
         color: ["#eef4f1", "#cfe3d9", "#8dbda8", "#3e8267"],
       },
-    },
-    series: [
-      {
-        name: "推荐指数",
-        type: "map",
-        map: "world",
-        roam: true,
-        zoom: 1.12,
-        emphasis: {
-          label: {
-            show: true,
-            color: "#ffffff",
-            formatter: (params) => params.data?.country_name || params.name,
-          },
-          itemStyle: {
-            areaColor: "#d9af6b",
-          },
-        },
-        itemStyle: {
-          areaColor: "#edf5f1",
-          borderColor: "rgba(78, 118, 103, 0.55)",
-          borderWidth: 1,
-        },
-        data: buildWorldMapSeriesData(),
-      },
-    ],
-  });
+    };
+  }
+
+  return option;
+}
+
+async function renderWorldMap() {
+  if (!worldMapRef.value || !worldMapData.value.length) {
+    return;
+  }
+
+  await ensureWorldMapRegistered();
+
+  if (worldMapInstance) {
+    worldMapInstance.dispose();
+  }
+
+  worldMapInstance = echarts.init(worldMapRef.value);
+  worldMapInstance.setOption(buildWorldMapOption());
 }
 
 async function sendAgentQuestion(question = agentInput.value) {
