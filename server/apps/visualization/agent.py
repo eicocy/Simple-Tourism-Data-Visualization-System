@@ -99,6 +99,59 @@ CONTINENT_KEYWORDS = {
     "oceania": "大洋洲",
 }
 
+CONTINENT_QUERY_ALIASES = {
+    "亚洲": "asia",
+    "asia": "asia",
+    "欧洲": "europe",
+    "europe": "europe",
+    "欧州": "europe",
+    "非洲": "africa",
+    "africa": "africa",
+    "北美": "north_america",
+    "北美洲": "north_america",
+    "north america": "north_america",
+    "南美": "south_america",
+    "南美洲": "south_america",
+    "south america": "south_america",
+    "大洋洲": "oceania",
+    "澳洲": "oceania",
+    "oceania": "oceania",
+}
+
+CONTINENT_DISPLAY_NAMES = {
+    "asia": "亚洲",
+    "europe": "欧洲",
+    "africa": "非洲",
+    "north_america": "北美洲",
+    "south_america": "南美洲",
+    "oceania": "大洋洲",
+}
+
+COUNTRY_CONTINENT_CODES = {
+    "Austria": "europe",
+    "France": "europe",
+    "Germany": "europe",
+    "Iceland": "europe",
+    "Italy": "europe",
+    "Netherlands": "europe",
+    "Norway": "europe",
+    "Slovenia": "europe",
+    "Spain": "europe",
+    "Switzerland": "europe",
+    "United Kingdom": "europe",
+    "Czechia": "europe",
+    "Canada": "north_america",
+    "United States": "north_america",
+    "United States of America": "north_america",
+    "Australia": "oceania",
+    "New Zealand": "oceania",
+    "Japan": "asia",
+    "South Korea": "asia",
+    "Singapore": "asia",
+    "United Arab Emirates": "asia",
+    "Nepal": "asia",
+}
+
 
 def normalize_score(value):
     """将指标值转换为 float。"""
@@ -171,11 +224,27 @@ def detect_intent(message):
 
 def detect_continent(message):
     """从用户问题中提取洲别偏好。"""
-    text = message or ""
+    text = (message or "").lower()
+    for keyword, continent_code in CONTINENT_QUERY_ALIASES.items():
+        if keyword in text:
+            return continent_code
+
     for keyword, continent in CONTINENT_KEYWORDS.items():
         if keyword in text:
             return continent
     return ""
+
+
+def country_matches_continent(country, continent):
+    """判断国家是否属于用户指定洲别，优先使用英文国家名兜底。"""
+    if not continent:
+        return True
+
+    country_continent_code = COUNTRY_CONTINENT_CODES.get(country["country_name_en"])
+    if country_continent_code:
+        return country_continent_code == continent
+
+    return country["continent"] == continent
 
 
 def country_sort_key_for_recommendation(country):
@@ -279,7 +348,11 @@ def build_disease_targets(countries):
 def build_scenery_targets(countries, intent, continent):
     """生成山水/城市风景推荐地图标注。"""
     if continent:
-        countries = [country for country in countries if country["continent"] == continent]
+        countries = [
+            country
+            for country in countries
+            if country_matches_continent(country, continent)
+        ]
 
     hint_map = {
         "scenery_mountain": MOUNTAIN_DESTINATION_HINTS,
@@ -358,7 +431,7 @@ def build_local_agent_response(message):
     else:
         targets = build_scenery_targets(countries, intent, continent)
         title = "目的地风景推荐"
-        scope = continent or "全球"
+        scope = CONTINENT_DISPLAY_NAMES.get(continent, continent) or "全球"
         answer = (
             f"我已按“{message}”的偏好在{scope}范围内筛选目的地，并在地图上高亮推荐。"
             "优先考虑旅游适宜指数、综合推荐指数、安全指数和幸福指数表现较好的国家。"

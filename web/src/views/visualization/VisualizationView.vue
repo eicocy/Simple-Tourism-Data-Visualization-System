@@ -93,13 +93,13 @@
 
         <div v-if="agentTargets.length" class="target-list">
           <div
-            v-for="target in agentTargets"
+            v-for="(target, index) in agentTargets"
             :key="`${target.country_id}-${target.category}`"
             class="target-item"
             :class="target.category"
           >
             <div class="target-title-row">
-              <strong>{{ target.country_name }}</strong>
+              <strong>{{ index + 1 }}. {{ getTargetDisplayName(target) }}</strong>
               <el-tag size="small" :type="target.category === 'risk' ? 'danger' : 'success'">
                 {{ target.category === "risk" ? "风险标红" : "推荐高亮" }}
               </el-tag>
@@ -229,6 +229,14 @@ function normalizeMapName(name) {
   return aliasMap[name] || name;
 }
 
+function getDisplayCountryName(item) {
+  return getLocalizedCountryName(item?.country_name_en || item?.country_name);
+}
+
+function getTargetDisplayName(target) {
+  return getLocalizedCountryName(target?.country_name_en || target?.country_name);
+}
+
 const chartData = ref(
   rawResults.map((item) => ({
     tourism_detail: item.tourism_detail || {},
@@ -249,8 +257,12 @@ const chartData = ref(
 
 const agentTargetMap = computed(() => {
   const targetMap = new Map();
-  agentTargets.value.forEach((target) => {
-    targetMap.set(normalizeMapName(target.country_name_en), target);
+  agentTargets.value.forEach((target, index) => {
+    targetMap.set(normalizeMapName(target.country_name_en), {
+      ...target,
+      marker_index: index + 1,
+      display_name: getTargetDisplayName(target),
+    });
   });
   return targetMap;
 });
@@ -321,6 +333,7 @@ async function loadWorldMapData() {
         country_id: item.country_id,
         country_name: item.country_name,
         country_name_en: item.country_name_en,
+        display_country_name: getLocalizedCountryName(item.country_name_en || item.country_name),
         tourism_index: Number(item.tourism_index ?? 0),
         tourism_detail: item.tourism_detail || {},
         safety_index: Number(item.safety_index ?? 0),
@@ -362,7 +375,10 @@ function buildWorldMapSeriesData() {
         show: true,
         color: "#ffffff",
         fontWeight: 700,
-        formatter: item.country_name,
+        fontSize: 11,
+        textBorderColor: "rgba(0, 0, 0, 0.35)",
+        textBorderWidth: 2,
+        formatter: String(target.marker_index || ""),
       },
     };
   });
@@ -378,7 +394,7 @@ function buildWorldMapOption() {
         const data = params.data || {};
         const target = data.agent_target;
         const lines = [
-          data.country_name || params.name,
+          target?.display_name || data.display_country_name || getDisplayCountryName(data) || params.name,
           `推荐指数：${params.value ?? "暂无数据"}`,
           `旅游适宜指数：${data.tourism_index ?? "--"}`,
           `安全指数：${data.safety_index ?? "--"}`,
@@ -404,7 +420,7 @@ function buildWorldMapOption() {
           label: {
             show: true,
             color: "#ffffff",
-            formatter: (params) => params.data?.country_name || params.name,
+            formatter: (params) => params.data?.display_country_name || params.name,
           },
           itemStyle: {
             areaColor: "#d9af6b",

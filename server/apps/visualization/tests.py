@@ -39,6 +39,12 @@ class MapAgentChatAPITests(APITestCase):
             code="NG",
             continent="非洲",
         )
+        japan = Country.objects.create(
+            name_zh="日本",
+            name_en="Japan",
+            code="JP",
+            continent="亚洲",
+        )
         CountryIndicator.objects.create(
             country=switzerland,
             year=2026,
@@ -72,6 +78,17 @@ class MapAgentChatAPITests(APITestCase):
             visa_index=Decimal("50.00"),
             overall_score=Decimal("58.00"),
         )
+        CountryIndicator.objects.create(
+            country=japan,
+            year=2026,
+            safety_index=Decimal("96.00"),
+            cost_index=Decimal("52.00"),
+            tourism_index=Decimal("99.00"),
+            climate_index=Decimal("88.00"),
+            medical_index=Decimal("95.00"),
+            visa_index=Decimal("85.00"),
+            overall_score=Decimal("95.00"),
+        )
 
     def test_requires_login(self):
         """未登录用户不能调用智能地图助手。"""
@@ -87,9 +104,11 @@ class MapAgentChatAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.data["data"]
+        target_names = {item["country_name_en"] for item in data["map_targets"]}
         self.assertEqual(data["intent"], "scenery_mountain")
         self.assertEqual(data["map_targets"][0]["country_name_en"], "Switzerland")
         self.assertEqual(data["map_targets"][0]["category"], "recommendation")
+        self.assertNotIn("Japan", target_names)
 
     def test_marks_conflict_risk_destinations(self):
         """战事查询会返回风险标注和不推荐理由。"""
