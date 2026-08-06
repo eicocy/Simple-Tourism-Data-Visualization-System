@@ -997,6 +997,7 @@ onBeforeUnmount(() => {
   grid-template-rows: minmax(428px, 0.92fr) minmax(468px, 1fr);
   gap: 8px;
   min-width: 0;
+  perspective: 1200px;
 }
 
 :global(.portfolio-card) {
@@ -1005,6 +1006,35 @@ onBeforeUnmount(() => {
   background: #171717;
   color: #ffffff;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  animation: homeCardEnter 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+:global(.portfolio-card:hover) {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 0 0 1px rgba(199, 255, 100, 0.16),
+    0 24px 70px rgba(0, 0, 0, 0.28);
+  filter: saturate(1.08);
+}
+
+:global(.portfolio-card:nth-child(2)) {
+  animation-delay: 90ms;
+}
+
+:global(.portfolio-card:nth-child(3)) {
+  animation-delay: 170ms;
+}
+
+:global(.portfolio-card:nth-child(4)) {
+  animation-delay: 240ms;
+}
+
+:global(.portfolio-card:nth-child(5)) {
+  animation-delay: 310ms;
 }
 
 .hello-card {
@@ -1058,6 +1088,7 @@ onBeforeUnmount(() => {
   font-family: var(--font-mono);
   font-size: 10px;
   white-space: nowrap;
+  animation: codeDrift 8s linear infinite;
   text-shadow:
     54px 12px 0 rgba(255, 255, 255, 0.18),
     108px 26px 0 rgba(255, 255, 255, 0.12),
@@ -1090,14 +1121,17 @@ onBeforeUnmount(() => {
 }
 
 .plane-back {
+  animation: tunnelBreathe 7s ease-in-out infinite;
   transform: translateZ(-180px) scale(0.62);
 }
 
 .plane-mid {
+  animation: tunnelBreathe 6.2s ease-in-out infinite reverse;
   transform: translateZ(-70px) scale(0.82);
 }
 
 .plane-front {
+  animation: tunnelBreathe 5.6s ease-in-out infinite;
   transform: translateZ(20px);
 }
 
@@ -1134,6 +1168,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 900;
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+  animation: tileFloat 4.8s ease-in-out infinite;
 }
 
 .tile-safety {
@@ -1148,6 +1183,7 @@ onBeforeUnmount(() => {
   right: 23%;
   background: linear-gradient(135deg, #1f2937, #f2c94c);
   transform: rotateX(55deg);
+  animation-delay: -1.2s;
 }
 
 .tile-visa {
@@ -1155,6 +1191,7 @@ onBeforeUnmount(() => {
   right: 8%;
   background: linear-gradient(135deg, #f96856, #111111);
   transform: rotateY(-38deg);
+  animation-delay: -2s;
 }
 
 .tile-index {
@@ -1163,6 +1200,7 @@ onBeforeUnmount(() => {
   background: linear-gradient(135deg, #ff5c39, #ffffff);
   color: #171717;
   transform: rotateX(58deg);
+  animation-delay: -2.8s;
 }
 
 .tile-map {
@@ -1170,6 +1208,7 @@ onBeforeUnmount(() => {
   bottom: 21%;
   background: linear-gradient(135deg, #12d59a, #3948ff);
   transform: rotateX(58deg);
+  animation-delay: -3.4s;
 }
 
 .tunnel-actions {
@@ -1235,6 +1274,7 @@ onBeforeUnmount(() => {
   color: rgba(255, 255, 255, 0.54);
   font-family: var(--font-mono);
   font-size: 10px;
+  animation: coordinatePulse 3.8s ease-in-out infinite;
 }
 
 .coordinate-tags span:nth-child(1) {
@@ -1245,11 +1285,13 @@ onBeforeUnmount(() => {
 .coordinate-tags span:nth-child(2) {
   left: 2%;
   bottom: 22%;
+  animation-delay: -1.1s;
 }
 
 .coordinate-tags span:nth-child(3) {
   right: 3%;
   bottom: 27%;
+  animation-delay: -2.2s;
 }
 
 .experience-card .map-canvas {
@@ -1258,6 +1300,7 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   opacity: 0.96;
   filter: grayscale(0.2) contrast(1.08);
+  animation: mapWake 900ms ease both;
 }
 
 .experience-card .home-empty {
@@ -1354,6 +1397,81 @@ onBeforeUnmount(() => {
 
   .experience-card .map-canvas {
     height: 340px;
+  }
+}
+
+@keyframes homeCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) rotateX(3deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+  }
+}
+
+@keyframes codeDrift {
+  from {
+    transform: translateX(-24px);
+  }
+  to {
+    transform: translateX(54px);
+  }
+}
+
+@keyframes tunnelBreathe {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.12);
+    filter: brightness(1);
+  }
+  50% {
+    border-color: rgba(199, 255, 100, 0.34);
+    filter: brightness(1.22);
+  }
+}
+
+@keyframes tileFloat {
+  0%,
+  100% {
+    margin-top: 0;
+  }
+  50% {
+    margin-top: -9px;
+  }
+}
+
+@keyframes coordinatePulse {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes mapWake {
+  from {
+    opacity: 0;
+    filter: grayscale(0.65) blur(6px);
+  }
+  to {
+    opacity: 0.96;
+    filter: grayscale(0.2) contrast(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-grid *,
+  .portfolio-grid *::before,
+  .portfolio-grid *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }
 </style>

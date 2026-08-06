@@ -82,3 +82,275 @@ a {
 .el-dialog__header {
   border-bottom: 1px solid var(--color-line);
 }
+
+.main-layout {
+  --studio-black: #0a0b0a;
+  --studio-ink: #141615;
+  --studio-paper: #f2f2ef;
+  --studio-muted: rgba(255, 255, 255, 0.58);
+  --studio-line: rgba(255, 255, 255, 0.12);
+  --studio-lime: #c7ff64;
+  --studio-teal: #57d5b0;
+  --studio-shadow: 0 22px 70px rgba(0, 0, 0, 0.32);
+}
+
+.main-layout .content-panel {
+  position: relative;
+  isolation: isolate;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    radial-gradient(circle at 64% 12%, rgba(199, 255, 100, 0.12), transparent 24%),
+    var(--studio-black);
+  background-size: 44px 44px, 44px 44px, auto, auto;
+}
+
+.main-layout .content-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, transparent 0 38%, rgba(255, 255, 255, 0.055) 44%, transparent 50%),
+    repeating-linear-gradient(180deg, transparent 0 13px, rgba(255, 255, 255, 0.025) 14px);
+  animation: studioScan 10s linear infinite;
+  content: "";
+}
+
+.main-layout .content-panel :is(
+  .recommendation-page,
+  .result-page,
+  .visualization-page,
+  .analysis-page,
+  .detail-page,
+  .admin-page,
+  .log-page,
+  .algorithm-page
+) {
+  color: var(--studio-paper);
+  animation: studioPageIn 520ms ease both;
+}
+
+.main-layout .content-panel :is(
+  .page-header,
+  .page-hero,
+  .result-hero,
+  .admin-hero,
+  .log-header,
+  .algorithm-hero
+) {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.035) 48%, rgba(199, 255, 100, 0.08)),
+    #171817 !important;
+  color: var(--studio-paper) !important;
+  box-shadow: var(--studio-shadow) !important;
+}
+
+.main-layout .content-panel :is(
+  .page-header,
+  .page-hero,
+  .result-hero,
+  .admin-hero,
+  .log-header,
+  .algorithm-hero
+)::after {
+  position: absolute;
+  inset: auto 18px 14px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--studio-lime), transparent);
+  opacity: 0.72;
+  animation: studioSignal 3.8s ease-in-out infinite;
+  content: "";
+}
+
+.main-layout .content-panel :is(
+  .page-tag,
+  .hero-tag,
+  .header-tag,
+  .summary-label,
+  .method-summary span,
+  .dimension-strip span,
+  .view-toolbar span
+) {
+  color: rgba(199, 255, 100, 0.78) !important;
+  font-family: var(--font-mono);
+  letter-spacing: 0 !important;
+}
+
+.main-layout .content-panel :is(h2, h3, h4) {
+  color: var(--studio-paper) !important;
+}
+
+.main-layout .content-panel :is(
+  .page-desc,
+  .hero-desc,
+  .panel-header p,
+  .result-header p,
+  .card-header p,
+  .chart-note
+) {
+  color: var(--studio-muted) !important;
+}
+
+.main-layout .content-panel :is(
+  .method-summary,
+  .dimension-strip article,
+  .form-panel,
+  .result-panel,
+  .summary-card,
+  .table-panel,
+  .map-card,
+  .agent-card,
+  .chart-card,
+  .table-card,
+  .panel,
+  .filter-panel,
+  .fixed-weight-panel
+) {
+  border: 1px solid var(--studio-line) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035)),
+    var(--studio-ink) !important;
+  color: var(--studio-paper) !important;
+  box-shadow: var(--studio-shadow) !important;
+  animation: studioCardIn 620ms ease both;
+}
+
+.main-layout .content-panel :is(
+  .dimension-strip article,
+  .summary-card,
+  .result-card,
+  .weight-card,
+  .target-item
+) {
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.main-layout .content-panel :is(
+  .dimension-strip article,
+  .summary-card,
+  .result-card,
+  .weight-card,
+  .target-item
+):hover {
+  transform: translateY(-3px);
+  border-color: rgba(199, 255, 100, 0.34) !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42) !important;
+}
+
+.main-layout .content-panel :is(.summary-card strong, .method-summary strong, .dimension-strip strong) {
+  color: var(--studio-lime) !important;
+}
+
+.main-layout .content-panel :is(.formula-box, .chat-window, .target-item, .result-card) {
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+.main-layout .content-panel :is(.el-table) {
+  --el-table-bg-color: rgba(255, 255, 255, 0.035);
+  --el-table-tr-bg-color: rgba(255, 255, 255, 0.035);
+  --el-table-header-bg-color: rgba(255, 255, 255, 0.08);
+  --el-table-header-text-color: rgba(255, 255, 255, 0.86);
+  --el-table-text-color: rgba(255, 255, 255, 0.74);
+  --el-table-border-color: rgba(255, 255, 255, 0.1);
+  --el-table-row-hover-bg-color: rgba(199, 255, 100, 0.08);
+}
+
+.main-layout .content-panel :is(.el-input__wrapper, .el-select__wrapper) {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16) inset;
+}
+
+.main-layout .content-panel :is(.el-button--primary) {
+  --el-button-bg-color: var(--studio-lime);
+  --el-button-border-color: var(--studio-lime);
+  --el-button-text-color: #070807;
+  --el-button-hover-bg-color: #dcff8e;
+  --el-button-hover-border-color: #dcff8e;
+  font-weight: 900;
+}
+
+.main-layout .content-panel :is(.el-button.is-plain) {
+  --el-button-bg-color: rgba(255, 255, 255, 0.055);
+  --el-button-border-color: rgba(255, 255, 255, 0.2);
+  --el-button-text-color: rgba(255, 255, 255, 0.78);
+  --el-button-hover-bg-color: rgba(255, 255, 255, 0.12);
+  --el-button-hover-border-color: rgba(199, 255, 100, 0.5);
+  --el-button-hover-text-color: #ffffff;
+}
+
+.main-layout .content-panel :is(.toolbar-segments, .weight-card) {
+  background: rgba(255, 255, 255, 0.07) !important;
+}
+
+.main-layout .content-panel :is(.toolbar-segments button.active, .result-rank) {
+  background: var(--studio-lime) !important;
+  color: #070807 !important;
+}
+
+@keyframes studioPageIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes studioCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes studioSignal {
+  0%,
+  100% {
+    transform: scaleX(0.4);
+    opacity: 0.28;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 0.82;
+  }
+}
+
+@keyframes studioScan {
+  from {
+    transform: translateX(-12%);
+  }
+  to {
+    transform: translateX(12%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-layout .content-panel,
+  .main-layout .content-panel::before,
+  .main-layout .content-panel *,
+  .main-layout .content-panel *::before,
+  .main-layout .content-panel *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 1ms !important;
+  }
+}

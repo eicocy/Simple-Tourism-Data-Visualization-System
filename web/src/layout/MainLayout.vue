@@ -85,10 +85,10 @@ async function handleLogout() {
 .main-layout {
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(40, 106, 115, 0.055) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(40, 106, 115, 0.055) 1px, transparent 1px),
-    #f4f7f5;
-  background-size: 40px 40px;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    #050605;
+  background-size: 44px 44px;
 }
 
 .main-header {
@@ -96,10 +96,12 @@ async function handleLogout() {
   justify-content: space-between;
   align-items: center;
   min-height: 78px;
-  padding: 14px 28px;
-  border-bottom: 1px solid var(--color-line);
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--color-text);
+  margin: 8px 8px 0;
+  padding: 14px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px 8px 0 0;
+  background: #f0f0ee;
+  color: #171717;
   backdrop-filter: blur(12px);
 }
 
@@ -115,7 +117,7 @@ async function handleLogout() {
   height: 46px;
   place-items: center;
   border-radius: 8px;
-  background: var(--color-primary-dark);
+  background: #171717;
   color: #ffffff;
   font-size: 22px;
   font-weight: 900;
@@ -123,14 +125,14 @@ async function handleLogout() {
 
 .system-title {
   margin: 0;
-  color: var(--color-primary-dark);
+  color: #171717;
   font-size: 25px;
   font-weight: 800;
 }
 
 .system-subtitle {
   margin: 6px 0 0;
-  color: var(--color-text-secondary);
+  color: #63635f;
   font-size: 13px;
 }
 
@@ -148,20 +150,22 @@ async function handleLogout() {
 }
 
 .user-name {
-  color: var(--color-primary-dark);
+  color: #171717;
   font-weight: 700;
 }
 
 .main-body {
   display: grid;
   grid-template-columns: 252px 1fr;
-  min-height: calc(100vh - 78px);
+  min-height: calc(100vh - 86px);
+  margin: 0 8px 8px;
 }
 
 .sidebar {
   padding: 18px 14px;
-  border-right: 1px solid var(--color-line);
-  background: rgba(255, 255, 255, 0.72);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 0 8px;
+  background: #f0f0ee;
 }
 
 .sidebar-summary {
@@ -169,25 +173,25 @@ async function handleLogout() {
   gap: 6px;
   margin-bottom: 14px;
   padding: 16px;
-  border: 1px solid var(--color-line);
+  border: 1px solid rgba(23, 23, 23, 0.1);
   border-radius: 8px;
   background:
-    linear-gradient(135deg, rgba(40, 106, 115, 0.08), transparent 60%),
+    linear-gradient(135deg, rgba(199, 255, 100, 0.2), transparent 58%),
     #ffffff;
 }
 
 .sidebar-summary span {
-  color: var(--color-text-secondary);
+  color: #6f6f69;
   font-size: 12px;
   text-transform: uppercase;
 }
 
 .sidebar-summary strong {
-  color: var(--color-primary-dark);
+  color: #171717;
 }
 
 .sidebar-summary b {
-  color: var(--color-primary);
+  color: #286a73;
   font-size: 30px;
   line-height: 1;
 }
@@ -203,23 +207,24 @@ async function handleLogout() {
   height: 46px;
   margin: 4px 8px;
   border-radius: 8px;
-  color: #455a57;
+  color: #373a38;
   font-weight: 700;
 }
 
 .menu-panel :deep(.el-menu-item:hover) {
-  background: #edf4f2;
-  color: var(--color-primary-dark);
+  background: #ffffff;
+  color: #171717;
 }
 
 .menu-panel :deep(.el-menu-item.is-active) {
-  background: var(--color-primary);
+  background: #171717;
   color: #ffffff;
 }
 
 .content-panel {
   padding: 22px 24px 34px;
   overflow: hidden;
+  border-radius: 0 0 8px 0;
 }
 
 @media (max-width: 900px) {
@@ -239,10 +244,12 @@ async function handleLogout() {
 
   .sidebar {
     padding: 16px 24px 0;
+    border-radius: 0;
   }
 
   .content-panel {
     padding: 16px 24px 24px;
+    border-radius: 0 0 8px 8px;
   }
 }
 </style>
