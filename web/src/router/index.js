@@ -2,7 +2,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import { fetchCsrfTokenApi, getCurrentUserApi } from "@/api";
-import MainLayout from "@/layout/MainLayout.vue";
 import { useUserStore } from "@/store";
 
 // 路由表设计说明：
@@ -33,8 +32,17 @@ const routes = [
     },
   },
   {
+    path: "/demo/ui-showcase",
+    name: "ui-showcase",
+    component: () => import("@/views/demo/DesignDemoView.vue"),
+    meta: {
+      title: "界面设计 Demo",
+      requiresAuth: false,
+    },
+  },
+  {
     path: "/app",
-    component: MainLayout,
+    component: () => import("@/layout/MainLayout.vue"),
     redirect: "/app/recommendation",
     meta: {
       requiresAuth: true,

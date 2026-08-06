@@ -1,6 +1,5 @@
 ﻿// Axios 请求封装文件
 import axios from "axios";
-import { ElMessage } from "element-plus";
 
 import { getStorage, removeStorage, setStorage } from "@/utils/storage";
 

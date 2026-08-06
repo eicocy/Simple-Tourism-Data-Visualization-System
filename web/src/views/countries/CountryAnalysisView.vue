@@ -144,11 +144,11 @@
 // 国家指标分析页面：从后端读取最新地图数据与洲别统计数据
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 
 import { getCountryContinentStatsApi, getCountryMapDataApi } from "@/api";
-import echarts from "@/plugins/echarts";
+import { loadEcharts } from "@/plugins/echarts";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
+import { runWhenVisible } from "@/utils/lazyChart";
 
 const router = useRouter();
 
@@ -167,6 +167,9 @@ const countChartRef = ref(null);
 // ECharts 实例，卸载页面时需要销毁，避免内存占用
 let continentChart = null;
 let countChart = null;
+let echartsInstance = null;
+let stopContinentChartRender = null;
+let stopCountChartRender = null;
 
 // 洲别下拉选项
 const continentOptions = computed(() => {
@@ -208,6 +211,13 @@ const topContinent = computed(() => {
 function formatNumber(value) {
   const numericValue = Number(value);
   return Number.isNaN(numericValue) ? 0 : Number(numericValue.toFixed(2));
+}
+
+async function getEcharts() {
+  if (!echartsInstance) {
+    echartsInstance = await loadEcharts();
+  }
+  return echartsInstance;
 }
 
 // 加载后端真实数据
@@ -252,16 +262,18 @@ async function loadAllData() {
 // 渲染全部图表
 function renderCharts() {
   nextTick(() => {
-    renderContinentChart();
-    renderCountChart();
+    scheduleContinentChartRender();
+    scheduleCountChartRender();
   });
 }
 
 // 渲染各洲平均推荐指数柱状图
-function renderContinentChart() {
+async function renderContinentChart() {
   if (!continentChartRef.value || !continentStats.value.length) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   continentChart?.dispose();
   continentChart = echarts.init(continentChartRef.value);
@@ -298,10 +310,12 @@ function renderContinentChart() {
 }
 
 // 渲染各洲国家数量环形图
-function renderCountChart() {
+async function renderCountChart() {
   if (!countChartRef.value || !continentStats.value.length) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   countChart?.dispose();
   countChart = echarts.init(countChartRef.value);
@@ -331,6 +345,26 @@ function renderCountChart() {
 }
 
 // 跳转到国家详情页
+function scheduleContinentChartRender() {
+  if (continentChart) {
+    renderContinentChart();
+    return;
+  }
+
+  stopContinentChartRender?.();
+  stopContinentChartRender = runWhenVisible(continentChartRef, renderContinentChart);
+}
+
+function scheduleCountChartRender() {
+  if (countChart) {
+    renderCountChart();
+    return;
+  }
+
+  stopCountChartRender?.();
+  stopCountChartRender = runWhenVisible(countChartRef, renderCountChart);
+}
+
 function goDetail(countryId) {
   router.push(`/app/countries/${countryId}`);
 }
@@ -348,6 +382,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  stopContinentChartRender?.();
+  stopCountChartRender?.();
   continentChart?.dispose();
   countChart?.dispose();
 });

@@ -1,13 +1,35 @@
 /* 全局样式入口文件 */
 
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;700;900&family=Fira+Code:wght@400;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-display: "DM Sans", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --font-mono: "Fira Code", "SFMono-Regular", Consolas, monospace;
+}
+
 :root {
   /* 系统主题色变量，便于后续统一维护 */
-  --color-primary: #2f6b5a;
-  --color-primary-dark: #1f4037;
-  --color-accent: #d9af6b;
-  --color-bg: #edf1ea;
-  --color-text: #20312c;
-  --color-text-secondary: #62736d;
+  --color-primary: #286a73;
+  --color-primary-dark: #18343b;
+  --color-accent: #d89a2b;
+  --color-risk: #c95042;
+  --color-safe: #2f936c;
+  --color-bg: #f4f7f5;
+  --color-panel: #ffffff;
+  --color-line: #dce5e1;
+  --color-text: #1e2c30;
+  --color-text-secondary: #60706c;
+  --shadow-panel: 0 10px 28px rgba(23, 48, 54, 0.08);
+  --radius-panel: 8px;
+  --el-color-primary: #286a73;
+  --el-color-primary-light-3: #558a91;
+  --el-color-primary-light-5: #86adb2;
+  --el-color-primary-light-7: #b8ced1;
+  --el-color-primary-light-9: #e8f0f1;
+  --el-color-primary-dark-2: #18343b;
+  --el-border-radius-base: 8px;
 }
 
 * {
@@ -25,9 +47,38 @@ body,
 
 body {
   background: var(--color-bg);
+  font-synthesis: none;
+  text-rendering: geometricPrecision;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+.el-button {
+  font-weight: 700;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--color-primary);
+  --el-button-border-color: var(--color-primary);
+  --el-button-hover-bg-color: #1a7180;
+  --el-button-hover-border-color: #1a7180;
+}
+
+.el-table {
+  --el-table-header-bg-color: #eef5f3;
+  --el-table-header-text-color: #19342f;
+  --el-table-row-hover-bg-color: #f0f7f5;
+  border-radius: var(--radius-panel);
+  overflow: hidden;
+}
+
+.el-dialog {
+  border-radius: var(--radius-panel);
+}
+
+.el-dialog__header {
+  border-bottom: 1px solid var(--color-line);
 }

@@ -55,7 +55,6 @@
 // 登录页组件逻辑
 import { reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 
 import { fetchCsrfTokenApi, loginApi } from "@/api";
 import { useUserStore } from "@/store";

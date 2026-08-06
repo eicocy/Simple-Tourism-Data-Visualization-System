@@ -1,12 +1,12 @@
-<template>
+﻿<template>
   <div class="visualization-page">
     <section class="page-hero">
       <div>
         <p class="hero-tag">Visualization Agent</p>
-        <h2>智能问答地图与推荐结果可视化</h2>
+        <h2>安全旅游分析可视化</h2>
         <p class="hero-desc">
-          通过对话识别风险查询和风景偏好，自动改变世界地图国家标注，并给出目的地文字详情、
-          不推荐理由或推荐说明。下方继续保留推荐结果图表分析。
+          用世界地图呈现国家安全状态，用问答助手标注风险与目的地偏好，
+          并通过柱状图、雷达图和明细表解释推荐结果。
         </p>
       </div>
       <div class="hero-actions">
@@ -30,6 +30,18 @@
       </article>
     </section>
 
+    <section class="view-toolbar">
+      <div>
+        <span>分析视图</span>
+        <strong>地图标注 · 指标对比 · 明细核对</strong>
+      </div>
+      <div class="toolbar-segments">
+        <button class="active" type="button">地图</button>
+        <button type="button">图表</button>
+        <button type="button">表格</button>
+      </div>
+    </section>
+
     <section class="agent-layout">
       <article class="map-card">
         <div class="card-header map-card-header">
@@ -47,6 +59,7 @@
           description="暂无地图数据，请先导入国家指标数据"
         />
         <div v-show="worldMapData.length" ref="worldMapRef" class="world-map-box"></div>
+        <p class="chart-note">提示：地图颜色表示推荐指数；问答标注会临时覆盖颜色，用于强调风险或候选目的地。</p>
       </article>
 
       <article class="agent-card">
@@ -120,6 +133,7 @@
           </div>
         </div>
         <div ref="barChartRef" class="chart-box"></div>
+        <p class="chart-note">读图方式：柱越高，综合推荐得分越高；该得分由多个指标加权得到。</p>
       </article>
 
       <article class="chart-card">
@@ -130,6 +144,7 @@
           </div>
         </div>
         <div ref="radarChartRef" class="chart-box"></div>
+        <p class="chart-note">读图方式：轮廓越外扩，说明该国家在对应指标上表现越强。</p>
       </article>
     </section>
 
@@ -169,11 +184,11 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 
 import { chatWithMapAgentApi, getCountryMapDataApi } from "@/api";
-import echarts from "@/plugins/echarts";
+import { loadEcharts } from "@/plugins/echarts";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
+import { runWhenVisible } from "@/utils/lazyChart";
 import { getStorage } from "@/utils/storage";
 
 const router = useRouter();
@@ -185,6 +200,10 @@ const worldMapRef = ref(null);
 let barChartInstance = null;
 let radarChartInstance = null;
 let worldMapInstance = null;
+let echartsInstance = null;
+let stopBarChartRender = null;
+let stopRadarChartRender = null;
+let stopWorldMapRender = null;
 
 const recommendationPayload = getStorage("recommendation_result_payload") || {};
 const rawResults = recommendationPayload.results || [];
@@ -298,9 +317,17 @@ function loadScript(url) {
   });
 }
 
+async function getEcharts() {
+  if (!echartsInstance) {
+    echartsInstance = await loadEcharts();
+  }
+  return echartsInstance;
+}
+
 async function ensureWorldMapRegistered() {
+  const echarts = await getEcharts();
   if (echarts.getMap("world")) {
-    return;
+    return echarts;
   }
 
   window.echarts = echarts;
@@ -309,7 +336,7 @@ async function ensureWorldMapRegistered() {
     try {
       await loadScript(url);
       if (echarts.getMap("world")) {
-        return;
+        return echarts;
       }
     } catch (error) {
       lastError = error;
@@ -449,7 +476,7 @@ function buildWorldMapOption() {
         color: "#53635e",
       },
       inRange: {
-        color: ["#eef4f1", "#cfe3d9", "#8dbda8", "#3e8267"],
+        color: ["#eaf3f1", "#b8d8d3", "#68aeb0", "#145c67"],
       },
     };
   }
@@ -462,7 +489,7 @@ async function renderWorldMap() {
     return;
   }
 
-  await ensureWorldMapRegistered();
+  const echarts = await ensureWorldMapRegistered();
 
   if (worldMapInstance) {
     worldMapInstance.dispose();
@@ -492,7 +519,11 @@ async function sendAgentQuestion(question = agentInput.value) {
       content: data.answer || "已完成地图标注。",
     });
     await nextTick();
-    await renderWorldMap();
+    if (worldMapInstance) {
+      await renderWorldMap();
+    } else {
+      scheduleWorldMapRender();
+    }
   } catch (error) {
     if (!error?.response) {
       ElMessage.error("智能地图助手暂时无法连接后端服务");
@@ -502,10 +533,12 @@ async function sendAgentQuestion(question = agentInput.value) {
   }
 }
 
-function renderBarChart() {
+async function renderBarChart() {
   if (!barChartRef.value || !chartData.value.length) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   if (barChartInstance) {
     barChartInstance.dispose();
@@ -547,8 +580,8 @@ function renderBarChart() {
         itemStyle: {
           borderRadius: [8, 8, 0, 0],
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: "#2f6b5a" },
-            { offset: 1, color: "#78a996" },
+            { offset: 0, color: "#145c67" },
+            { offset: 1, color: "#38b985" },
           ]),
         },
       },
@@ -556,10 +589,12 @@ function renderBarChart() {
   });
 }
 
-function renderRadarChart() {
+async function renderRadarChart() {
   if (!radarChartRef.value || !chartData.value.length) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   if (radarChartInstance) {
     radarChartInstance.dispose();
@@ -607,16 +642,54 @@ function renderRadarChart() {
 
 function renderCharts() {
   nextTick(() => {
-    renderBarChart();
-    renderRadarChart();
+    scheduleBarChartRender();
+    scheduleRadarChartRender();
   });
 }
 
 async function refreshAllCharts() {
   await loadWorldMapData();
   await nextTick();
-  await renderWorldMap();
+  if (worldMapInstance) {
+    await renderWorldMap();
+  } else {
+    scheduleWorldMapRender();
+  }
   renderCharts();
+}
+
+function scheduleBarChartRender() {
+  if (barChartInstance) {
+    renderBarChart();
+    return;
+  }
+
+  stopBarChartRender?.();
+  stopBarChartRender = runWhenVisible(barChartRef, renderBarChart);
+}
+
+function scheduleRadarChartRender() {
+  if (radarChartInstance) {
+    renderRadarChart();
+    return;
+  }
+
+  stopRadarChartRender?.();
+  stopRadarChartRender = runWhenVisible(radarChartRef, renderRadarChart);
+}
+
+function scheduleWorldMapRender() {
+  if (worldMapInstance) {
+    renderWorldMap();
+    return;
+  }
+
+  stopWorldMapRender?.();
+  stopWorldMapRender = runWhenVisible(worldMapRef, () => {
+    renderWorldMap().catch(() => {
+      ElMessage.error("世界地图加载失败，请检查地图接口或网络后刷新页面");
+    });
+  });
 }
 
 function goRecommendation() {
@@ -634,7 +707,7 @@ onMounted(async () => {
   try {
     await loadWorldMapData();
     await nextTick();
-    await renderWorldMap();
+    scheduleWorldMapRender();
   } catch (error) {
     ElMessage.error("世界地图加载失败，请检查地图接口或网络后刷新页面");
   }
@@ -643,6 +716,9 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  stopBarChartRender?.();
+  stopRadarChartRender?.();
+  stopWorldMapRender?.();
 
   if (barChartInstance) {
     barChartInstance.dispose();
@@ -662,7 +738,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .visualization-page {
   display: grid;
-  gap: 20px;
+  gap: 18px;
 }
 
 .page-hero {
@@ -670,19 +746,23 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  padding: 28px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #1d3f52 0%, #2d6b7b 100%);
-  color: #f7fbfc;
-  box-shadow: 0 18px 42px rgba(22, 43, 53, 0.14);
+  padding: 26px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(40, 106, 115, 0.08), transparent 44%),
+    #ffffff;
+  color: var(--color-text);
+  box-shadow: var(--shadow-panel);
 }
 
 .hero-tag {
   margin: 0 0 10px;
-  color: rgba(247, 251, 252, 0.7);
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   font-size: 12px;
+  font-weight: 900;
 }
 
 .page-hero h2 {
@@ -694,7 +774,7 @@ onBeforeUnmount(() => {
   margin: 0;
   max-width: 820px;
   line-height: 1.7;
-  color: rgba(247, 251, 252, 0.86);
+  color: var(--color-text-secondary);
 }
 
 .hero-actions {
@@ -705,14 +785,15 @@ onBeforeUnmount(() => {
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 12px;
 }
 
 .summary-card {
   padding: 22px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 30px rgba(26, 43, 39, 0.08);
+  border: 1px solid rgba(16, 59, 70, 0.12);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .summary-label {
@@ -723,20 +804,69 @@ onBeforeUnmount(() => {
 }
 
 .summary-card strong {
-  color: #21443c;
+  color: var(--color-primary-dark);
   font-size: 26px;
+}
+
+.view-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.view-toolbar span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.view-toolbar strong {
+  color: var(--color-primary-dark);
+}
+
+.toolbar-segments {
+  display: flex;
+  padding: 3px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: #f4f8f6;
+}
+
+.toolbar-segments button {
+  min-width: 64px;
+  min-height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.toolbar-segments button.active {
+  background: #ffffff;
+  color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(23, 48, 54, 0.1);
 }
 
 .agent-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.65fr);
-  gap: 20px;
+  gap: 12px;
 }
 
 .chart-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 12px;
 }
 
 .map-card,
@@ -744,9 +874,16 @@ onBeforeUnmount(() => {
 .chart-card,
 .table-card {
   padding: 24px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 32px rgba(24, 43, 38, 0.08);
+  border: 1px solid rgba(16, 59, 70, 0.12);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.map-card {
+  background:
+    linear-gradient(180deg, rgba(20, 92, 103, 0.06), transparent 32%),
+    var(--color-panel);
 }
 
 .map-card-header {
@@ -762,7 +899,7 @@ onBeforeUnmount(() => {
 
 .card-header h3 {
   margin: 0 0 8px;
-  color: #28473f;
+  color: var(--color-primary-dark);
 }
 
 .card-header p {
@@ -792,8 +929,8 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   padding: 14px;
   border: 1px solid rgba(86, 115, 105, 0.16);
-  border-radius: 14px;
-  background: #f7faf8;
+  border-radius: 8px;
+  background: #eef5f3;
 }
 
 .chat-message {
@@ -803,7 +940,7 @@ onBeforeUnmount(() => {
 .chat-message span {
   max-width: 90%;
   padding: 10px 12px;
-  border-radius: 12px;
+  border-radius: 8px;
   line-height: 1.6;
   font-size: 14px;
 }
@@ -820,7 +957,7 @@ onBeforeUnmount(() => {
 
 .chat-message.user span {
   color: #ffffff;
-  background: #2f6b5a;
+  background: var(--color-primary);
 }
 
 .agent-input-row {
@@ -840,7 +977,7 @@ onBeforeUnmount(() => {
 
 .target-item {
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px solid rgba(69, 120, 101, 0.18);
   background: #f9fbfa;
 }
@@ -878,6 +1015,15 @@ onBeforeUnmount(() => {
   height: 380px;
 }
 
+.chart-note {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-line);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
 @media (max-width: 1180px) {
   .agent-layout,
   .chart-grid {
@@ -893,6 +1039,11 @@ onBeforeUnmount(() => {
 
   .summary-grid {
     grid-template-columns: 1fr;
+  }
+
+  .view-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .world-map-box {
