@@ -43,6 +43,11 @@
 
         <article class="portfolio-card tunnel-card">
           <div class="perspective-stage" aria-hidden="true">
+            <span class="stage-reticle"></span>
+            <span class="orbit orbit-wide"></span>
+            <span class="orbit orbit-tight"></span>
+            <span class="signal-beam beam-one"></span>
+            <span class="signal-beam beam-two"></span>
             <i class="plane plane-back"></i>
             <i class="plane plane-mid"></i>
             <i class="plane plane-front"></i>
@@ -51,7 +56,8 @@
               :key="tile.label"
               :class="['floating-tile', tile.className]"
             >
-              {{ tile.label }}
+              <strong>{{ tile.label }}</strong>
+              <small>{{ tile.metric }}</small>
             </span>
           </div>
           <div class="tunnel-actions">
@@ -249,11 +255,11 @@ const matrixTools = [
 ];
 
 const tunnelTiles = [
-  { label: "Safety", className: "tile-safety" },
-  { label: "Budget", className: "tile-budget" },
-  { label: "Visa", className: "tile-visa" },
-  { label: "Index", className: "tile-index" },
-  { label: "Map", className: "tile-map" },
+  { label: "Safety", metric: "live risk", className: "tile-safety" },
+  { label: "Budget", metric: "cost fit", className: "tile-budget" },
+  { label: "Visa", metric: "entry signal", className: "tile-visa" },
+  { label: "Index", metric: "score model", className: "tile-index" },
+  { label: "Map", metric: "geo layer", className: "tile-map" },
 ];
 
 const loginForm = reactive({
@@ -1113,6 +1119,84 @@ onBeforeUnmount(() => {
   perspective: 720px;
 }
 
+.stage-reticle {
+  position: absolute;
+  inset: 18%;
+  border: 1px solid rgba(199, 255, 100, 0.18);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 46px rgba(199, 255, 100, 0.035),
+    0 0 46px rgba(199, 255, 100, 0.045);
+  transform: rotateX(62deg) translateZ(8px);
+  animation: reticlePulse 4.6s ease-in-out infinite;
+}
+
+.stage-reticle::before,
+.stage-reticle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #c7ff64;
+  box-shadow: 0 0 26px rgba(199, 255, 100, 0.75);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.stage-reticle::after {
+  width: 46%;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(199, 255, 100, 0.62), transparent);
+  box-shadow: none;
+  transform-origin: 0 50%;
+  animation: reticleSweep 5.5s linear infinite;
+}
+
+.orbit {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.orbit-wide {
+  inset: 7% 4%;
+  transform: rotateX(64deg) rotateZ(-8deg);
+  animation: orbitGlow 6.5s ease-in-out infinite;
+}
+
+.orbit-tight {
+  inset: 25% 27%;
+  border-color: rgba(199, 255, 100, 0.16);
+  transform: rotateX(62deg) rotateZ(18deg);
+  animation: orbitGlow 5.2s ease-in-out infinite reverse;
+}
+
+.signal-beam {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(199, 255, 100, 0.72), transparent);
+  opacity: 0.44;
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+.beam-one {
+  transform: rotate(-28deg);
+  animation: beamPulse 3.4s ease-in-out infinite;
+}
+
+.beam-two {
+  transform: rotate(148deg);
+  animation: beamPulse 4.1s ease-in-out infinite reverse;
+}
+
 .plane {
   position: absolute;
   inset: 0;
@@ -1159,16 +1243,59 @@ onBeforeUnmount(() => {
 .floating-tile {
   position: absolute;
   display: grid;
-  min-width: 86px;
-  min-height: 52px;
-  place-items: center;
+  min-width: 104px;
+  min-height: 60px;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 6px;
   color: #ffffff;
-  font-size: 13px;
-  font-weight: 900;
-  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+  text-align: left;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 46px rgba(0, 0, 0, 0.34);
   animation: tileFloat 4.8s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+.floating-tile::before {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  content: "";
+}
+
+.floating-tile::after {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 16px currentColor;
+  content: "";
+  opacity: 0.8;
+}
+
+.floating-tile strong {
+  position: relative;
+  z-index: 1;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.floating-tile small {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .tile-safety {
@@ -1203,6 +1330,10 @@ onBeforeUnmount(() => {
   animation-delay: -2.8s;
 }
 
+.tile-index small {
+  color: rgba(23, 23, 23, 0.62);
+}
+
 .tile-map {
   right: 22%;
   bottom: 21%;
@@ -1229,6 +1360,18 @@ onBeforeUnmount(() => {
   color: #5c5c5c;
   font-weight: 900;
   cursor: pointer;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.tunnel-actions button:hover,
+.tunnel-actions button:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 4px rgba(199, 255, 100, 0.16),
+    0 16px 38px rgba(0, 0, 0, 0.34);
 }
 
 .tunnel-actions button + button {
@@ -1429,6 +1572,48 @@ onBeforeUnmount(() => {
   50% {
     border-color: rgba(199, 255, 100, 0.34);
     filter: brightness(1.22);
+  }
+}
+
+@keyframes reticlePulse {
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: rotateX(62deg) translateZ(8px) scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: rotateX(62deg) translateZ(8px) scale(1.04);
+  }
+}
+
+@keyframes reticleSweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitGlow {
+  0%,
+  100% {
+    opacity: 0.36;
+    filter: brightness(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes beamPulse {
+  0%,
+  100% {
+    opacity: 0.18;
+    width: 30%;
+  }
+  50% {
+    opacity: 0.62;
+    width: 49%;
   }
 }
 
