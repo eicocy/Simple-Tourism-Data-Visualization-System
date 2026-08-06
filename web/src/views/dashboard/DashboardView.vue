@@ -1243,27 +1243,28 @@ onBeforeUnmount(() => {
 .floating-tile {
   position: absolute;
   display: grid;
-  min-width: 104px;
-  min-height: 60px;
+  width: 122px;
+  min-height: 58px;
   align-content: center;
   gap: 4px;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 6px;
+  border-radius: 8px;
   color: #ffffff;
   text-align: left;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 18px 46px rgba(0, 0, 0, 0.34);
   animation: tileFloat 4.8s ease-in-out infinite;
-  transform-style: preserve-3d;
+  transform: translate3d(0, 0, 0);
+  transform-style: flat;
 }
 
 .floating-tile::before {
   position: absolute;
   inset: 5px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 4px;
+  border-radius: 6px;
   content: "";
 }
 
@@ -1283,14 +1284,16 @@ onBeforeUnmount(() => {
 .floating-tile strong {
   position: relative;
   z-index: 1;
-  font-size: 13px;
+  display: block;
+  font-size: 14px;
   font-weight: 950;
-  line-height: 1;
+  line-height: 1.05;
 }
 
 .floating-tile small {
   position: relative;
   z-index: 1;
+  display: block;
   color: rgba(255, 255, 255, 0.72);
   font-family: var(--font-mono);
   font-size: 9px;
@@ -1299,17 +1302,15 @@ onBeforeUnmount(() => {
 }
 
 .tile-safety {
-  top: 22%;
-  left: 11%;
+  top: 20%;
+  left: 10%;
   background: linear-gradient(135deg, #1439ff, #df43ff);
-  transform: rotateY(42deg);
 }
 
 .tile-budget {
-  top: 12%;
-  right: 23%;
+  top: 10%;
+  right: 22%;
   background: linear-gradient(135deg, #1f2937, #f2c94c);
-  transform: rotateX(55deg);
   animation-delay: -1.2s;
 }
 
@@ -1317,16 +1318,14 @@ onBeforeUnmount(() => {
   top: 38%;
   right: 8%;
   background: linear-gradient(135deg, #f96856, #111111);
-  transform: rotateY(-38deg);
   animation-delay: -2s;
 }
 
 .tile-index {
-  bottom: 13%;
-  left: 27%;
+  bottom: 11%;
+  left: 24%;
   background: linear-gradient(135deg, #ff5c39, #ffffff);
   color: #171717;
-  transform: rotateX(58deg);
   animation-delay: -2.8s;
 }
 
@@ -1336,9 +1335,8 @@ onBeforeUnmount(() => {
 
 .tile-map {
   right: 22%;
-  bottom: 21%;
+  bottom: 20%;
   background: linear-gradient(135deg, #12d59a, #3948ff);
-  transform: rotateX(58deg);
   animation-delay: -3.4s;
 }
 
@@ -1620,10 +1618,10 @@ onBeforeUnmount(() => {
 @keyframes tileFloat {
   0%,
   100% {
-    margin-top: 0;
+    transform: translate3d(0, 0, 0);
   }
   50% {
-    margin-top: -9px;
+    transform: translate3d(0, -8px, 0);
   }
 }
 
