@@ -182,7 +182,6 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Upload } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 
 import {
   getAdminReportApi,
@@ -192,8 +191,9 @@ import {
   updateAdminUserApi,
   uploadCountryIndicatorExcelApi,
 } from "@/api";
-import echarts from "@/plugins/echarts";
+import { loadEcharts } from "@/plugins/echarts";
 import { useUserStore } from "@/store";
+import { runWhenVisible } from "@/utils/lazyChart";
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -239,6 +239,10 @@ const recommendationTrendChartRef = ref(null);
 let safetyRankingChart = null;
 let continentPieChart = null;
 let recommendationTrendChart = null;
+let echartsInstance = null;
+let stopSafetyRankingRender = null;
+let stopContinentPieRender = null;
+let stopRecommendationTrendRender = null;
 
 // 用户表格数据
 const userTableData = ref([]);
@@ -269,6 +273,13 @@ function formatDate(value) {
     return "--";
   }
   return new Date(value).toLocaleString("zh-CN", { hour12: false });
+}
+
+async function getEcharts() {
+  if (!echartsInstance) {
+    echartsInstance = await loadEcharts();
+  }
+  return echartsInstance;
 }
 
 function redirectToLogin() {
@@ -360,16 +371,18 @@ async function loadAllData() {
 
 function renderReportCharts() {
   nextTick(() => {
-    renderSafetyRankingChart();
-    renderContinentPieChart();
-    renderRecommendationTrendChart();
+    scheduleSafetyRankingRender();
+    scheduleContinentPieRender();
+    scheduleRecommendationTrendRender();
   });
 }
 
-function renderSafetyRankingChart() {
+async function renderSafetyRankingChart() {
   if (!safetyRankingChartRef.value) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   safetyRankingChart?.dispose();
   safetyRankingChart = echarts.init(safetyRankingChartRef.value);
@@ -409,10 +422,12 @@ function renderSafetyRankingChart() {
   });
 }
 
-function renderContinentPieChart() {
+async function renderContinentPieChart() {
   if (!continentPieChartRef.value) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   continentPieChart?.dispose();
   continentPieChart = echarts.init(continentPieChartRef.value);
@@ -441,10 +456,12 @@ function renderContinentPieChart() {
   });
 }
 
-function renderRecommendationTrendChart() {
+async function renderRecommendationTrendChart() {
   if (!recommendationTrendChartRef.value) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   recommendationTrendChart?.dispose();
   recommendationTrendChart = echarts.init(recommendationTrendChartRef.value);
@@ -483,6 +500,39 @@ function renderRecommendationTrendChart() {
       },
     ],
   });
+}
+
+function scheduleSafetyRankingRender() {
+  if (safetyRankingChart) {
+    renderSafetyRankingChart();
+    return;
+  }
+
+  stopSafetyRankingRender?.();
+  stopSafetyRankingRender = runWhenVisible(safetyRankingChartRef, renderSafetyRankingChart);
+}
+
+function scheduleContinentPieRender() {
+  if (continentPieChart) {
+    renderContinentPieChart();
+    return;
+  }
+
+  stopContinentPieRender?.();
+  stopContinentPieRender = runWhenVisible(continentPieChartRef, renderContinentPieChart);
+}
+
+function scheduleRecommendationTrendRender() {
+  if (recommendationTrendChart) {
+    renderRecommendationTrendChart();
+    return;
+  }
+
+  stopRecommendationTrendRender?.();
+  stopRecommendationTrendRender = runWhenVisible(
+    recommendationTrendChartRef,
+    renderRecommendationTrendChart,
+  );
 }
 
 function handleResize() {
@@ -566,6 +616,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  stopSafetyRankingRender?.();
+  stopContinentPieRender?.();
+  stopRecommendationTrendRender?.();
   safetyRankingChart?.dispose();
   continentPieChart?.dispose();
   recommendationTrendChart?.dispose();

@@ -1,64 +1,89 @@
-﻿<template>
-  <div class="home-page">
-    <header class="top-bar">
-      <div class="brand-block">
-        <p class="brand-tag">Graduation Project</p>
-        <h1>安全旅游国家推荐与可视化系统</h1>
-      </div>
-
-      <div class="auth-actions">
-        <el-button plain @click="openLoginDialog">登录</el-button>
-        <el-button type="primary" @click="openRegisterDialog">注册</el-button>
-      </div>
-    </header>
-
-    <section class="hero-layout">
-      <section class="intro-panel">
-        <p class="intro-tag">World Insight</p>
-        <h2>基于国家指标的世界旅游安全地图</h2>
-        <p class="intro-desc">
-          地图以最新国家指标数据为基础进行着色，颜色由浅到深表示推荐指数由低到高。
-          当前首页直接读取后端数据库中的真实国家数据，用于展示系统的核心可视化效果。
-        </p>
-
-        <div class="intro-stats">
-          <article class="stat-card">
-            <span>覆盖国家</span>
-            <strong>{{ worldMapData.length }}</strong>
-          </article>
-          <article class="stat-card">
-            <span>最高推荐指数</span>
-            <strong>{{ highestScore }}</strong>
-          </article>
-          <article class="stat-card">
-            <span>数据年份</span>
-            <strong>{{ latestYear }}</strong>
-          </article>
+<template>
+  <div class="home-shell">
+    <section class="portfolio-frame">
+      <header class="portfolio-nav">
+        <button class="brand-chip" type="button" @click="goHomeTop">SAFE TRAVEL</button>
+        <nav class="nav-tabs" aria-label="首页导航">
+          <button class="active" type="button">Dashboard</button>
+          <button type="button" @click="goSystem">Project</button>
+          <button type="button" @click="goVisualization">Case Study</button>
+        </nav>
+        <div class="nav-actions">
+          <button class="minimize-button" type="button" aria-label="Minimize">?</button>
+          <el-button class="home-ghost-button" plain @click="openLoginDialog">登录</el-button>
+          <el-button class="home-primary-button" type="primary" @click="openRegisterDialog">注册</el-button>
         </div>
+      </header>
 
-        <div class="intro-buttons">
-          <el-button type="primary" @click="goSystem">进入系统</el-button>
-          <el-button plain @click="openLoginDialog">管理员登录</el-button>
-        </div>
-      </section>
-
-      <section class="map-stage">
-        <div class="map-panel">
-          <div class="map-panel-header">
-            <div>
-              <p class="map-tag">Global Map</p>
-              <h3>世界旅游推荐指数分布</h3>
-            </div>
-            <el-tag type="success">颜色越深推荐越高</el-tag>
+      <main class="portfolio-grid">
+        <article class="portfolio-card hello-card">
+          <div class="code-globe" aria-hidden="true">
+            <span v-for="row in codeRows" :key="row">{{ row }}</span>
           </div>
+          <h1>Hello<br />Traveler</h1>
+          <p>
+            let destination = safer.route(); &gt; The analysis is open.
+            Type nothing. Just explore.
+          </p>
+        </article>
 
+        <HomeGaugeCard
+          :display-value="highestScore"
+          value-label="Top index"
+          :left-label="latestYear"
+          center-label="Recommendation model"
+          right-label="100"
+        />
+
+        <HomeSkillMatrix
+          :skills="skillMatrix"
+          :tools="matrixTools"
+          :note="`${worldMapData.length || 0} countries improving`"
+        />
+
+        <article class="portfolio-card tunnel-card">
+          <div class="perspective-stage" aria-hidden="true">
+            <span class="stage-reticle"></span>
+            <span class="orbit orbit-wide"></span>
+            <span class="orbit orbit-tight"></span>
+            <span class="signal-beam beam-one"></span>
+            <span class="signal-beam beam-two"></span>
+            <i class="plane plane-back"></i>
+            <i class="plane plane-mid"></i>
+            <i class="plane plane-front"></i>
+            <span
+              v-for="tile in tunnelTiles"
+              :key="tile.label"
+              :class="['floating-tile', tile.className]"
+            >
+              <strong>{{ tile.label }}</strong>
+              <small>{{ tile.metric }}</small>
+            </span>
+          </div>
+          <div class="tunnel-actions">
+            <button type="button" @click="openLoginDialog">Who are you?</button>
+            <button type="button" @click="goSystem">Open system</button>
+          </div>
+        </article>
+
+        <article class="portfolio-card experience-card">
+          <div class="experience-head">
+            <span>? My experience</span>
+            <b>{{ worldMapData.length || "--" }} countries</b>
+          </div>
           <el-empty
             v-if="!worldMapData.length && !mapLoading"
+            class="home-empty"
             description="暂无地图数据，请先导入国家指标数据"
           />
           <div v-show="worldMapData.length" ref="mapRef" class="map-canvas"></div>
-        </div>
-      </section>
+          <div class="coordinate-tags" aria-hidden="true">
+            <span>42.3601° N, 71.0589° W</span>
+            <span>37.7749° N, 122.4194° W</span>
+            <span>31.2304° N, 121.4737° E</span>
+          </div>
+        </article>
+      </main>
     </section>
 
     <el-dialog
@@ -154,11 +179,14 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 
-import echarts from "@/plugins/echarts";
+import HomeGaugeCard from "@/components/home/HomeGaugeCard.vue";
+import HomeSkillMatrix from "@/components/home/HomeSkillMatrix.vue";
+import { loadEcharts } from "@/plugins/echarts";
 import { getCountryMapDataApi, loginApi, registerApi } from "@/api";
 import { useUserStore } from "@/store";
+import { getLocalizedCountryName } from "@/utils/countryNameMap";
+import { runWhenVisible } from "@/utils/lazyChart";
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -176,173 +204,10 @@ const latestYear = ref("--");
 const worldMapData = ref([]);
 
 let worldMapInstance = null;
+let echartsInstance = null;
+let stopWorldMapRender = null;
 
-// 世界地图英文名到中文名映射，用于地图悬浮与强调显示汉化
-const WORLD_NAME_MAP = {
-  Afghanistan: "阿富汗",
-  Albania: "阿尔巴尼亚",
-  Algeria: "阿尔及利亚",
-  Angola: "安哥拉",
-  Argentina: "阿根廷",
-  Armenia: "亚美尼亚",
-  Australia: "澳大利亚",
-  Austria: "奥地利",
-  Azerbaijan: "阿塞拜疆",
-  Bahamas: "巴哈马",
-  Bahrain: "巴林",
-  Bangladesh: "孟加拉国",
-  Belarus: "白俄罗斯",
-  Belgium: "比利时",
-  Belize: "伯利兹",
-  Benin: "贝宁",
-  Bhutan: "不丹",
-  Bolivia: "玻利维亚",
-  "Bosnia and Herzegovina": "波斯尼亚和黑塞哥维那",
-  Botswana: "博茨瓦纳",
-  Brazil: "巴西",
-  Brunei: "文莱",
-  Bulgaria: "保加利亚",
-  "Burkina Faso": "布基纳法索",
-  Burundi: "布隆迪",
-  Cambodia: "柬埔寨",
-  Cameroon: "喀麦隆",
-  Canada: "加拿大",
-  Chad: "乍得",
-  Chile: "智利",
-  China: "中国",
-  Colombia: "哥伦比亚",
-  Congo: "刚果",
-  "Costa Rica": "哥斯达黎加",
-  Croatia: "克罗地亚",
-  Cuba: "古巴",
-  Cyprus: "塞浦路斯",
-  Czechia: "捷克",
-  Denmark: "丹麦",
-  Djibouti: "吉布提",
-  "Dominican Republic": "多米尼加",
-  Ecuador: "厄瓜多尔",
-  Egypt: "埃及",
-  "El Salvador": "萨尔瓦多",
-  Estonia: "爱沙尼亚",
-  Ethiopia: "埃塞俄比亚",
-  Finland: "芬兰",
-  France: "法国",
-  Gabon: "加蓬",
-  Gambia: "冈比亚",
-  Georgia: "格鲁吉亚",
-  Germany: "德国",
-  Ghana: "加纳",
-  Greece: "希腊",
-  Greenland: "格陵兰",
-  Guatemala: "危地马拉",
-  Guinea: "几内亚",
-  Guyana: "圭亚那",
-  Haiti: "海地",
-  Honduras: "洪都拉斯",
-  "Hong Kong": "中国香港",
-  Hungary: "匈牙利",
-  Iceland: "冰岛",
-  India: "印度",
-  Indonesia: "印度尼西亚",
-  Iran: "伊朗",
-  Iraq: "伊拉克",
-  Ireland: "爱尔兰",
-  Israel: "以色列",
-  Italy: "意大利",
-  Jamaica: "牙买加",
-  Japan: "日本",
-  Jordan: "约旦",
-  Kazakhstan: "哈萨克斯坦",
-  Kenya: "肯尼亚",
-  Kosovo: "科索沃",
-  Kuwait: "科威特",
-  Kyrgyzstan: "吉尔吉斯斯坦",
-  Laos: "老挝",
-  Latvia: "拉脱维亚",
-  Lebanon: "黎巴嫩",
-  Lesotho: "莱索托",
-  Liberia: "利比里亚",
-  Libya: "利比亚",
-  Lithuania: "立陶宛",
-  Luxembourg: "卢森堡",
-  Macao: "中国澳门",
-  Madagascar: "马达加斯加",
-  Malawi: "马拉维",
-  Malaysia: "马来西亚",
-  Mali: "马里",
-  Malta: "马耳他",
-  Mauritania: "毛里塔尼亚",
-  Mauritius: "毛里求斯",
-  Mexico: "墨西哥",
-  Moldova: "摩尔多瓦",
-  Mongolia: "蒙古",
-  Montenegro: "黑山",
-  Morocco: "摩洛哥",
-  Mozambique: "莫桑比克",
-  Myanmar: "缅甸",
-  Namibia: "纳米比亚",
-  Nepal: "尼泊尔",
-  Netherlands: "荷兰",
-  "New Zealand": "新西兰",
-  Nicaragua: "尼加拉瓜",
-  Niger: "尼日尔",
-  Nigeria: "尼日利亚",
-  "North Korea": "朝鲜",
-  "North Macedonia": "北马其顿",
-  Norway: "挪威",
-  Oman: "阿曼",
-  Pakistan: "巴基斯坦",
-  Panama: "巴拿马",
-  Paraguay: "巴拉圭",
-  Peru: "秘鲁",
-  Philippines: "菲律宾",
-  Poland: "波兰",
-  Portugal: "葡萄牙",
-  Qatar: "卡塔尔",
-  Romania: "罗马尼亚",
-  Russia: "俄罗斯",
-  Rwanda: "卢旺达",
-  "Saudi Arabia": "沙特阿拉伯",
-  Senegal: "塞内加尔",
-  Serbia: "塞尔维亚",
-  "Sierra Leone": "塞拉利昂",
-  Singapore: "新加坡",
-  Slovakia: "斯洛伐克",
-  Slovenia: "斯洛文尼亚",
-  Somalia: "索马里",
-  "South Africa": "南非",
-  "South Korea": "韩国",
-  Korea: "韩国",
-  Spain: "西班牙",
-  "Sri Lanka": "斯里兰卡",
-  Sudan: "苏丹",
-  Suriname: "苏里南",
-  Sweden: "瑞典",
-  Switzerland: "瑞士",
-  Syria: "叙利亚",
-  Taiwan: "中国台湾",
-  Tajikistan: "塔吉克斯坦",
-  Tanzania: "坦桑尼亚",
-  Thailand: "泰国",
-  Togo: "多哥",
-  Tunisia: "突尼斯",
-  Turkey: "土耳其",
-  Turkmenistan: "土库曼斯坦",
-  Uganda: "乌干达",
-  Ukraine: "乌克兰",
-  "United Arab Emirates": "阿联酋",
-  "United Kingdom": "英国",
-  "United States of America": "美国",
-  "United States": "美国",
-  Uruguay: "乌拉圭",
-  Uzbekistan: "乌兹别克斯坦",
-  Venezuela: "委内瑞拉",
-  Vietnam: "越南",
-  Yemen: "也门",
-  Zambia: "赞比亚",
-  Zimbabwe: "津巴布韦",
-};
-
+// 世界地图英文名到中文名映射统一复用工具函数。
 const WORLD_MAP_SCRIPT_URLS = [
   "https://cdn.jsdelivr.net/npm/echarts-maps@1.1.0/world.js",
   "https://unpkg.com/echarts-maps@1.1.0/world.js",
@@ -354,6 +219,48 @@ const highestScore = computed(() => {
   }
   return Math.max(...worldMapData.value.map((item) => item.value)).toFixed(2);
 });
+
+const codeRows = [
+  "risk.map(country).score().sort(desc)",
+  "visa.signal + safety.index + ppp.cost",
+  "tourism.weight = 0.40; safety = 0.30",
+  "route.click(country) -> country.detail",
+  "agent.answer('where should I go?')",
+  "dataset.sync(year).normalize(0, 100)",
+  "if safety < threshold: mark.watch",
+  "happiness.index contributes comfort",
+];
+
+const skillMatrix = computed(() => [
+  { name: "Tourism Suitability", score: 40 },
+  { name: "Safety Index", score: 30 },
+  { name: "Budget Comfort", score: 15 },
+  { name: "Happiness Signal", score: 15 },
+  { name: "Map Interaction", score: worldMapData.value.length ? 100 : 0 },
+  { name: "Recommendation Flow", score: 100 },
+  { name: "Risk Explanation", score: 90 },
+  { name: "Country Detail", score: 85 },
+  { name: "Visualization Agent", score: 80 },
+]);
+
+const matrixTools = [
+  "Vue",
+  "Tailwind",
+  "ECharts",
+  "Element Plus",
+  "Pinia",
+  "Django API",
+  "Recommendation",
+  "Map Agent",
+];
+
+const tunnelTiles = [
+  { label: "Safety", metric: "live risk", className: "tile-safety" },
+  { label: "Budget", metric: "cost fit", className: "tile-budget" },
+  { label: "Visa", metric: "entry signal", className: "tile-visa" },
+  { label: "Index", metric: "score model", className: "tile-index" },
+  { label: "Map", metric: "geo layer", className: "tile-map" },
+];
 
 const loginForm = reactive({
   username: "admin",
@@ -401,6 +308,14 @@ function openRegisterDialog() {
 
 function goSystem() {
   router.push("/app/recommendation");
+}
+
+function goVisualization() {
+  router.push("/app/visualization");
+}
+
+function goHomeTop() {
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function handleLogin() {
@@ -459,9 +374,17 @@ function loadScript(url) {
   });
 }
 
+async function getEcharts() {
+  if (!echartsInstance) {
+    echartsInstance = await loadEcharts();
+  }
+  return echartsInstance;
+}
+
 async function ensureWorldMapRegistered() {
+  const echarts = await getEcharts();
   if (echarts.getMap("world")) {
-    return;
+    return echarts;
   }
 
   window.echarts = echarts;
@@ -471,7 +394,7 @@ async function ensureWorldMapRegistered() {
     try {
       await loadScript(url);
       if (echarts.getMap("world")) {
-        return;
+        return echarts;
       }
     } catch (error) {
       lastError = error;
@@ -503,7 +426,7 @@ function getDisplayCountryName(data, mapName) {
   if (backendName && !isEnglishText(backendName)) {
     return backendName;
   }
-  return WORLD_NAME_MAP[mapName] || WORLD_NAME_MAP[backendName] || backendName || mapName;
+  return getLocalizedCountryName(mapName || backendName) || backendName || mapName;
 }
 
 async function loadWorldMapData() {
@@ -535,7 +458,7 @@ async function renderWorldMap() {
     return;
   }
 
-  await ensureWorldMapRegistered();
+  const echarts = await ensureWorldMapRegistered();
 
   if (worldMapInstance) {
     worldMapInstance.dispose();
@@ -573,10 +496,10 @@ async function renderWorldMap() {
       right: 24,
       bottom: 26,
       textStyle: {
-        color: "#4d6b8a",
+        color: "rgba(255, 255, 255, 0.62)",
       },
       inRange: {
-        color: ["#dceeff", "#9fcbff", "#5f9ef5", "#1e5fbf"],
+        color: ["#17201d", "#31584e", "#7ec6a6", "#c7ff64"],
       },
     },
     series: [
@@ -590,15 +513,15 @@ async function renderWorldMap() {
           label: {
             show: true,
             color: "#ffffff",
-            formatter: (params) => WORLD_NAME_MAP[params.name] || params.name,
+            formatter: (params) => getLocalizedCountryName(params.name),
           },
           itemStyle: {
-            areaColor: "#d9af6b",
+            areaColor: "#ffb84d",
           },
         },
         itemStyle: {
-          areaColor: "#edf5ff",
-          borderColor: "rgba(103, 145, 198, 0.75)",
+          areaColor: "#111714",
+          borderColor: "rgba(199, 255, 100, 0.24)",
           borderWidth: 1,
         },
         data: worldMapData.value,
@@ -616,6 +539,20 @@ async function renderWorldMap() {
   });
 }
 
+function scheduleWorldMapRender() {
+  if (worldMapInstance) {
+    renderWorldMap();
+    return;
+  }
+
+  stopWorldMapRender?.();
+  stopWorldMapRender = runWhenVisible(mapRef, () => {
+    renderWorldMap().catch(() => {
+      ElMessage.error("首页地图加载失败，请检查后端接口或网络后刷新页面");
+    });
+  });
+}
+
 function handleResize() {
   worldMapInstance?.resize();
 }
@@ -624,7 +561,7 @@ onMounted(async () => {
   try {
     await loadWorldMapData();
     await nextTick();
-    await renderWorldMap();
+    scheduleWorldMapRender();
     window.addEventListener("resize", handleResize);
   } catch (error) {
     ElMessage.error("首页地图加载失败，请检查后端接口或网络后刷新页面");
@@ -633,6 +570,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  stopWorldMapRender?.();
 
   if (worldMapInstance) {
     worldMapInstance.dispose();
@@ -644,11 +582,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .home-page {
   min-height: 100vh;
-  overflow: hidden;
+  overflow: auto;
   background:
-    radial-gradient(circle at top left, rgba(132, 185, 255, 0.2), transparent 24%),
-    radial-gradient(circle at bottom right, rgba(185, 216, 255, 0.24), transparent 20%),
-    linear-gradient(180deg, #ffffff 0%, #f3f8ff 48%, #eef5ff 100%);
+    linear-gradient(90deg, rgba(40, 106, 115, 0.055) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(40, 106, 115, 0.055) 1px, transparent 1px),
+    #f4f7f5;
+  background-size: 40px 40px;
 }
 
 .top-bar {
@@ -658,22 +597,23 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
-  padding: 28px 34px 0;
+  padding: 26px 34px 0;
 }
 
 .brand-block h1 {
   margin: 8px 0 0;
-  color: #173b63;
-  font-size: 34px;
-  font-weight: 700;
+  color: var(--color-primary-dark);
+  font-size: 32px;
+  font-weight: 800;
 }
 
 .brand-tag {
   margin: 0;
-  color: rgba(23, 59, 99, 0.72);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   font-size: 12px;
+  font-weight: 800;
 }
 
 .auth-actions {
@@ -685,39 +625,41 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-columns: 620px minmax(580px, 1fr);
-  gap: 28px;
-  align-items: center;
-  padding: 6vh 34px 34px;
+  grid-template-columns: 430px minmax(620px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 34px;
 }
 
 .intro-panel {
-  padding: 28px;
-  border: 1px solid rgba(142, 180, 224, 0.38);
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 24px 60px rgba(74, 116, 167, 0.12);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .intro-tag {
   margin: 0 0 12px;
-  color: #4d7ec4;
-  letter-spacing: 0.12em;
+  color: #145c67;
+  letter-spacing: 0;
   text-transform: uppercase;
   font-size: 12px;
+  font-weight: 900;
 }
 
 .intro-panel h2 {
   margin: 0 0 14px;
-  color: #183b62;
-  font-size: 42px;
-  line-height: 1.18;
+  color: #0b2f38;
+  font-size: 38px;
+  line-height: 1.16;
 }
 
 .intro-desc {
   margin: 0;
-  color: rgba(42, 72, 108, 0.82);
+  color: #526762;
   line-height: 1.8;
   font-size: 15px;
 }
@@ -731,21 +673,21 @@ onBeforeUnmount(() => {
 
 .stat-card {
   padding: 16px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #f7fbff 0%, #edf5ff 100%);
-  border: 1px solid rgba(145, 184, 231, 0.32);
+  border-radius: 8px;
+  background: #f4f8f6;
+  border: 1px solid var(--color-line);
 }
 
 .stat-card span {
   display: block;
   margin-bottom: 8px;
-  color: rgba(69, 103, 145, 0.74);
+  color: #60716d;
   font-size: 13px;
 }
 
 .stat-card strong {
-  color: #17416b;
-  font-size: 24px;
+  color: #0b2f38;
+  font-size: 28px;
 }
 
 .intro-buttons {
@@ -754,18 +696,53 @@ onBeforeUnmount(() => {
   margin-top: 24px;
 }
 
+.analysis-notes {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 22px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.analysis-notes span:first-child {
+  color: var(--color-primary);
+}
+
+.method-note {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-line);
+}
+
+.method-note strong,
+.source-note span {
+  color: var(--color-primary-dark);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.method-note p,
+.source-note p {
+  margin: 6px 0 0;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .map-stage {
-  min-height: 72vh;
+  min-height: 74vh;
 }
 
 .map-panel {
-  min-height: 72vh;
+  min-height: 74vh;
   padding: 20px 20px 10px;
-  border-radius: 32px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(241, 247, 255, 0.96));
-  border: 1px solid rgba(150, 187, 232, 0.4);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 24px 60px rgba(83, 122, 173, 0.14);
+  border-radius: 8px;
+  background: #fbfdfb;
+  border: 1px solid var(--color-line);
+  box-shadow: var(--shadow-panel);
 }
 
 .map-panel-header {
@@ -778,22 +755,59 @@ onBeforeUnmount(() => {
 
 .map-tag {
   margin: 0 0 8px;
-  color: #4d7ec4;
-  letter-spacing: 0.12em;
+  color: #145c67;
+  letter-spacing: 0;
   text-transform: uppercase;
   font-size: 12px;
+  font-weight: 900;
 }
 
 .map-panel-header h3 {
   margin: 0;
-  color: #173b63;
+  color: #0b2f38;
   font-size: 26px;
+}
+
+.map-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 10px;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.scale-block,
+.map-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.scale-block i {
+  display: block;
+  width: 160px;
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #edf4f2, #bcd7d3, #6aaeb0, #286a73);
 }
 
 .map-canvas {
   width: 100%;
-  height: calc(72vh - 70px);
-  min-height: 540px;
+  height: calc(72vh - 130px);
+  min-height: 470px;
+}
+
+.source-note {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  padding: 10px;
+  border-top: 1px solid var(--color-line);
 }
 
 @media (max-width: 980px) {
@@ -841,6 +855,806 @@ onBeforeUnmount(() => {
   .intro-buttons {
     flex-direction: column;
     width: 100%;
+  }
+}
+
+.map-canvas {
+  width: 100%;
+  height: min(68vh, 720px);
+  min-height: 510px;
+}
+
+.home-empty {
+  min-height: 510px;
+  --el-empty-fill-color-0: rgba(255, 255, 255, 0.9);
+  --el-empty-fill-color-1: rgba(255, 255, 255, 0.16);
+  --el-empty-fill-color-2: rgba(255, 255, 255, 0.14);
+  --el-empty-fill-color-3: rgba(255, 255, 255, 0.12);
+  --el-empty-fill-color-4: rgba(255, 255, 255, 0.1);
+  --el-empty-fill-color-5: rgba(255, 255, 255, 0.08);
+  --el-empty-fill-color-6: rgba(255, 255, 255, 0.06);
+  --el-empty-fill-color-7: rgba(255, 255, 255, 0.04);
+  --el-empty-fill-color-8: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.home-primary-button:deep(.el-button),
+.home-primary-button {
+  border-color: #c7ff64;
+  background: #c7ff64;
+  color: #050605;
+  font-weight: 900;
+}
+
+.home-primary-button:hover,
+.home-primary-button:focus {
+  border-color: #ddff95;
+  background: #ddff95;
+  color: #050605;
+}
+
+.home-ghost-button,
+.home-dark-button {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 800;
+}
+
+.home-ghost-button:hover,
+.home-dark-button:hover,
+.home-ghost-button:focus,
+.home-dark-button:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+@media (max-width: 980px) {
+  .map-canvas {
+    height: 58vh;
+    min-height: 420px;
+  }
+}
+
+.home-shell {
+  min-height: 100vh;
+  padding: 8px;
+  overflow-x: hidden;
+  background: #000000;
+  color: #ffffff;
+}
+
+.portfolio-frame {
+  min-height: calc(100vh - 16px);
+  padding: 8px;
+  border-radius: 18px;
+  background: #f0f0ee;
+}
+
+.portfolio-nav {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 346px) 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 18px 14px;
+}
+
+.brand-chip {
+  justify-self: start;
+  min-height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.66);
+  color: #171717;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.nav-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  height: 26px;
+  padding: 1px;
+  border: 1px solid #dededc;
+  border-radius: 999px;
+  background: #f6f6f4;
+}
+
+.nav-tabs button {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #171717;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.nav-tabs button.active {
+  background: #171717;
+  color: #ffffff;
+}
+
+.nav-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+
+.minimize-button {
+  display: grid;
+  width: 44px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #7a7a78;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.portfolio-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(280px, 0.9fr) minmax(420px, 1.85fr);
+  grid-template-rows: minmax(428px, 0.92fr) minmax(468px, 1fr);
+  gap: 8px;
+  min-width: 0;
+  perspective: 1200px;
+}
+
+:global(.portfolio-card) {
+  min-width: 0;
+  border-radius: 14px;
+  background: #171717;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  animation: homeCardEnter 720ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition:
+    transform 220ms ease,
+    box-shadow 220ms ease,
+    filter 220ms ease;
+}
+
+:global(.portfolio-card:hover) {
+  transform: translateY(-4px);
+  box-shadow:
+    inset 0 0 0 1px rgba(199, 255, 100, 0.16),
+    0 24px 70px rgba(0, 0, 0, 0.28);
+  filter: saturate(1.08);
+}
+
+:global(.portfolio-card:nth-child(2)) {
+  animation-delay: 90ms;
+}
+
+:global(.portfolio-card:nth-child(3)) {
+  animation-delay: 170ms;
+}
+
+:global(.portfolio-card:nth-child(4)) {
+  animation-delay: 240ms;
+}
+
+:global(.portfolio-card:nth-child(5)) {
+  animation-delay: 310ms;
+}
+
+.hello-card {
+  position: relative;
+  min-height: 428px;
+  padding: 26px;
+  overflow: hidden;
+}
+
+.hello-card h1 {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.52);
+  font-family: var(--font-display);
+  font-size: clamp(52px, 5vw, 72px);
+  font-weight: 300;
+  line-height: 0.92;
+}
+
+.hello-card p {
+  position: absolute;
+  right: 26px;
+  bottom: 24px;
+  left: 26px;
+  z-index: 2;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.code-globe {
+  position: absolute;
+  inset: 20px 0 0 -26px;
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  width: 115%;
+  transform: perspective(620px) rotateX(54deg) rotateZ(0deg);
+  transform-origin: top center;
+  opacity: 0.76;
+  mask-image: radial-gradient(circle at 52% 36%, #000 0 30%, rgba(0, 0, 0, 0.72) 42%, transparent 70%);
+}
+
+.code-globe span {
+  display: block;
+  color: rgba(255, 255, 255, 0.34);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  white-space: nowrap;
+  animation: codeDrift 8s linear infinite;
+  text-shadow:
+    54px 12px 0 rgba(255, 255, 255, 0.18),
+    108px 26px 0 rgba(255, 255, 255, 0.12),
+    162px 40px 0 rgba(255, 255, 255, 0.22),
+    216px 54px 0 rgba(255, 255, 255, 0.1);
+}
+
+.tunnel-card {
+  position: relative;
+  grid-column: span 2;
+  min-height: 468px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12), transparent 2px),
+    #171717;
+  background-size: 58px 58px, auto;
+}
+
+.perspective-stage {
+  position: absolute;
+  inset: 30px;
+  perspective: 720px;
+}
+
+.stage-reticle {
+  position: absolute;
+  inset: 18%;
+  border: 1px solid rgba(199, 255, 100, 0.18);
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 46px rgba(199, 255, 100, 0.035),
+    0 0 46px rgba(199, 255, 100, 0.045);
+  transform: rotateX(62deg) translateZ(8px);
+  animation: reticlePulse 4.6s ease-in-out infinite;
+}
+
+.stage-reticle::before,
+.stage-reticle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #c7ff64;
+  box-shadow: 0 0 26px rgba(199, 255, 100, 0.75);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.stage-reticle::after {
+  width: 46%;
+  height: 1px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(199, 255, 100, 0.62), transparent);
+  box-shadow: none;
+  transform-origin: 0 50%;
+  animation: reticleSweep 5.5s linear infinite;
+}
+
+.orbit {
+  position: absolute;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.orbit-wide {
+  inset: 7% 4%;
+  transform: rotateX(64deg) rotateZ(-8deg);
+  animation: orbitGlow 6.5s ease-in-out infinite;
+}
+
+.orbit-tight {
+  inset: 25% 27%;
+  border-color: rgba(199, 255, 100, 0.16);
+  transform: rotateX(62deg) rotateZ(18deg);
+  animation: orbitGlow 5.2s ease-in-out infinite reverse;
+}
+
+.signal-beam {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 44%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(199, 255, 100, 0.72), transparent);
+  opacity: 0.44;
+  transform-origin: 0 50%;
+  pointer-events: none;
+}
+
+.beam-one {
+  transform: rotate(-28deg);
+  animation: beamPulse 3.4s ease-in-out infinite;
+}
+
+.beam-two {
+  transform: rotate(148deg);
+  animation: beamPulse 4.1s ease-in-out infinite reverse;
+}
+
+.plane {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  transform-style: preserve-3d;
+}
+
+.plane-back {
+  animation: tunnelBreathe 7s ease-in-out infinite;
+  transform: translateZ(-180px) scale(0.62);
+}
+
+.plane-mid {
+  animation: tunnelBreathe 6.2s ease-in-out infinite reverse;
+  transform: translateZ(-70px) scale(0.82);
+}
+
+.plane-front {
+  animation: tunnelBreathe 5.6s ease-in-out infinite;
+  transform: translateZ(20px);
+}
+
+.plane::before,
+.plane::after {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.09);
+  content: "";
+}
+
+.plane::before {
+  top: 50%;
+  left: -40%;
+  width: 180%;
+  height: 1px;
+}
+
+.plane::after {
+  top: -40%;
+  left: 50%;
+  width: 1px;
+  height: 180%;
+}
+
+.floating-tile {
+  position: absolute;
+  display: grid;
+  width: 122px;
+  min-height: 58px;
+  align-content: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #ffffff;
+  text-align: left;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 18px 46px rgba(0, 0, 0, 0.34);
+  animation: tileFloat 4.8s ease-in-out infinite;
+  transform: translate3d(0, 0, 0);
+  transform-style: flat;
+}
+
+.floating-tile::before {
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  content: "";
+}
+
+.floating-tile::after {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 16px currentColor;
+  content: "";
+  opacity: 0.8;
+}
+
+.floating-tile strong {
+  position: relative;
+  z-index: 1;
+  display: block;
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.05;
+}
+
+.floating-tile small {
+  position: relative;
+  z-index: 1;
+  display: block;
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tile-safety {
+  top: 20%;
+  left: 10%;
+  background: linear-gradient(135deg, #1439ff, #df43ff);
+}
+
+.tile-budget {
+  top: 10%;
+  right: 22%;
+  background: linear-gradient(135deg, #1f2937, #f2c94c);
+  animation-delay: -1.2s;
+}
+
+.tile-visa {
+  top: 38%;
+  right: 8%;
+  background: linear-gradient(135deg, #f96856, #111111);
+  animation-delay: -2s;
+}
+
+.tile-index {
+  bottom: 11%;
+  left: 24%;
+  background: linear-gradient(135deg, #ff5c39, #ffffff);
+  color: #171717;
+  animation-delay: -2.8s;
+}
+
+.tile-index small {
+  color: rgba(23, 23, 23, 0.62);
+}
+
+.tile-map {
+  right: 22%;
+  bottom: 20%;
+  background: linear-gradient(135deg, #12d59a, #3948ff);
+  animation-delay: -3.4s;
+}
+
+.tunnel-actions {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+}
+
+.tunnel-actions button {
+  min-width: 128px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #5c5c5c;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.tunnel-actions button:hover,
+.tunnel-actions button:focus-visible {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 4px rgba(199, 255, 100, 0.16),
+    0 16px 38px rgba(0, 0, 0, 0.34);
+}
+
+.tunnel-actions button + button {
+  background: #050505;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.experience-card {
+  position: relative;
+  min-height: 468px;
+  padding: 14px 18px 18px;
+  overflow: hidden;
+}
+
+.experience-head {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.experience-head b {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.coordinate-tags {
+  position: absolute;
+  inset: 20% 11% 17%;
+  pointer-events: none;
+}
+
+.coordinate-tags span {
+  position: absolute;
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(30, 30, 30, 0.82);
+  color: rgba(255, 255, 255, 0.54);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  animation: coordinatePulse 3.8s ease-in-out infinite;
+}
+
+.coordinate-tags span:nth-child(1) {
+  top: 16%;
+  left: 4%;
+}
+
+.coordinate-tags span:nth-child(2) {
+  left: 2%;
+  bottom: 22%;
+  animation-delay: -1.1s;
+}
+
+.coordinate-tags span:nth-child(3) {
+  right: 3%;
+  bottom: 27%;
+  animation-delay: -2.2s;
+}
+
+.experience-card .map-canvas {
+  height: 426px;
+  min-height: 0;
+  margin-top: 8px;
+  opacity: 0.96;
+  filter: grayscale(0.2) contrast(1.08);
+  animation: mapWake 900ms ease both;
+}
+
+.experience-card .home-empty {
+  min-height: 402px;
+}
+
+.home-primary-button {
+  border-color: #c7ff64;
+  background: #c7ff64;
+  color: #050605;
+  font-weight: 900;
+}
+
+.home-primary-button:hover,
+.home-primary-button:focus {
+  border-color: #d9ff8a;
+  background: #d9ff8a;
+  color: #050605;
+}
+
+.home-ghost-button {
+  border-color: #d8d8d6;
+  background: #ffffff;
+  color: #171717;
+  font-weight: 900;
+}
+
+.home-ghost-button:hover,
+.home-ghost-button:focus {
+  border-color: #171717;
+  background: #171717;
+  color: #ffffff;
+}
+
+@media (max-width: 1180px) {
+  .portfolio-grid {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto;
+  }
+
+  .skill-card,
+  .experience-card {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .home-shell {
+    padding: 0;
+  }
+
+  .portfolio-frame {
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .portfolio-nav {
+    grid-template-columns: 1fr;
+    padding: 8px 8px 12px;
+  }
+
+  .brand-chip,
+  .nav-tabs,
+  .nav-actions {
+    justify-self: stretch;
+  }
+
+  .nav-actions {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .portfolio-grid {
+    grid-template-columns: 1fr;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .tunnel-card,
+  .skill-card,
+  .experience-card {
+    grid-column: auto;
+  }
+
+  .hello-card,
+  .tunnel-card,
+  .experience-card {
+    min-height: 360px;
+  }
+
+  .hello-card h1 {
+    font-size: 56px;
+  }
+
+  .experience-card .map-canvas {
+    height: 340px;
+  }
+}
+
+@keyframes homeCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px) rotateX(3deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotateX(0);
+  }
+}
+
+@keyframes codeDrift {
+  from {
+    transform: translateX(-24px);
+  }
+  to {
+    transform: translateX(54px);
+  }
+}
+
+@keyframes tunnelBreathe {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.12);
+    filter: brightness(1);
+  }
+  50% {
+    border-color: rgba(199, 255, 100, 0.34);
+    filter: brightness(1.22);
+  }
+}
+
+@keyframes reticlePulse {
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: rotateX(62deg) translateZ(8px) scale(0.96);
+  }
+  50% {
+    opacity: 0.9;
+    transform: rotateX(62deg) translateZ(8px) scale(1.04);
+  }
+}
+
+@keyframes reticleSweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitGlow {
+  0%,
+  100% {
+    opacity: 0.36;
+    filter: brightness(0.8);
+  }
+  50% {
+    opacity: 0.8;
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes beamPulse {
+  0%,
+  100% {
+    opacity: 0.18;
+    width: 30%;
+  }
+  50% {
+    opacity: 0.62;
+    width: 49%;
+  }
+}
+
+@keyframes tileFloat {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -8px, 0);
+  }
+}
+
+@keyframes coordinatePulse {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.88;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes mapWake {
+  from {
+    opacity: 0;
+    filter: grayscale(0.65) blur(6px);
+  }
+  to {
+    opacity: 0.96;
+    filter: grayscale(0.2) contrast(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portfolio-grid *,
+  .portfolio-grid *::before,
+  .portfolio-grid *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
   }
 }
 </style>

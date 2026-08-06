@@ -4,14 +4,14 @@
     <section class="result-hero">
       <div>
         <p class="hero-tag">Result Center</p>
-        <h2>旅游推荐结果展示</h2>
+        <h2>安全旅游推荐结果</h2>
         <p class="hero-desc">
-          本页以表格形式展示旅游国家推荐结果，支持按综合得分排序，
-          同时展示旅游适宜指数、安全指数、幸福指数和消费指数，便于毕业设计演示。
+          用数据表展示推荐国家排序，并保留旅游适宜、安全、幸福、消费等指标，
+          便于解释每个目的地为什么值得选择。
         </p>
       </div>
       <div class="hero-actions">
-        <el-button plain @click="goBack">返回重新推荐</el-button>
+        <el-button plain @click="goBack">重新生成推荐</el-button>
         <el-button plain @click="goVisualization">查看可视化</el-button>
         <el-button type="primary" @click="sortByScoreDesc">按得分排序</el-button>
         <el-button
@@ -41,18 +41,18 @@
       </article>
     </section>
 
-    <!-- 表格展示区域 -->
+    <!-- 结果展示表格 -->
     <section class="table-panel">
       <div class="panel-header">
         <div>
-          <h3>推荐国家列表</h3>
-          <p>表格默认按综合得分从高到低排列，旅游适宜指数已在结果中单独体现。</p>
+          <h3>推荐结果列表</h3>
+          <p>表格默认按综合得分从高到低排序，点击旅游指数可查看更细的维度拆分。</p>
         </div>
       </div>
 
       <el-empty
         v-if="!tableData.length"
-        description="暂无推荐结果，请先前往推荐输入页提交推荐条件"
+        description="暂无推荐结果数据，请先前往推荐输入页提交推荐请求"
       >
         <el-button type="primary" @click="goBack">前往推荐输入页</el-button>
       </el-empty>
@@ -108,7 +108,6 @@
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { Download } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 
 import { exportRecommendationExcelApi } from "@/api";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
@@ -117,7 +116,7 @@ import { getStorage } from "@/utils/storage";
 // 路由实例，用于页面跳转
 const router = useRouter();
 
-// 从本地缓存中读取推荐结果数据
+// 从本地缓存中读取推荐结果参数
 const recommendationPayload = getStorage("recommendation_result_payload") || {};
 
 // 查询年份
@@ -138,7 +137,7 @@ function formatNumber(value) {
   return numericValue.toFixed(2);
 }
 
-// 整理旅游适宜指数明细，兼容旧缓存中没有明细字段的情况
+// 兼容旅游指数明细数据旧缓存或没有明细字段的情况
 function normalizeTourismDetail(detail = {}) {
   return {
     destination_attraction_score: formatNumber(detail.destination_attraction_score),
@@ -212,7 +211,7 @@ async function handleExport() {
       results: tableData.value,
     });
     const filenameYear = exportYear || "当前";
-    downloadBlob(blob, `旅游推荐结果_${filenameYear}.xlsx`);
+    downloadBlob(blob, `安全旅游推荐结果_${filenameYear}.xlsx`);
     ElMessage.success("推荐结果 Excel 已导出");
   } catch (error) {
     ElMessage.error("导出失败，请稍后重试");
@@ -246,7 +245,7 @@ sortByScoreDesc();
 <style scoped>
 .result-page {
   display: grid;
-  gap: 20px;
+  gap: 18px;
 }
 
 .result-hero {
@@ -254,19 +253,23 @@ sortByScoreDesc();
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  padding: 28px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #21453d 0%, #3b7466 100%);
-  color: #fffef9;
-  box-shadow: 0 18px 42px rgba(20, 42, 37, 0.14);
+  padding: 26px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(40, 106, 115, 0.08), transparent 44%),
+    #ffffff;
+  color: var(--color-text);
+  box-shadow: var(--shadow-panel);
 }
 
 .hero-tag {
   margin: 0 0 10px;
-  color: rgba(255, 254, 249, 0.72);
+  color: var(--color-primary);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   font-size: 12px;
+  font-weight: 900;
 }
 
 .result-hero h2 {
@@ -278,7 +281,7 @@ sortByScoreDesc();
   margin: 0;
   max-width: 760px;
   line-height: 1.7;
-  color: rgba(255, 254, 249, 0.86);
+  color: var(--color-text-secondary);
 }
 
 .hero-actions {
@@ -289,14 +292,15 @@ sortByScoreDesc();
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 12px;
 }
 
 .summary-card {
   padding: 22px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 12px 30px rgba(26, 43, 39, 0.08);
+  border: 1px solid rgba(16, 59, 70, 0.12);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .summary-label {
@@ -307,15 +311,16 @@ sortByScoreDesc();
 }
 
 .summary-card strong {
-  color: #21443c;
+  color: var(--color-primary-dark);
   font-size: 28px;
 }
 
 .table-panel {
   padding: 24px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 12px 32px rgba(24, 43, 38, 0.08);
+  border: 1px solid rgba(16, 59, 70, 0.12);
+  border-radius: 8px;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .panel-header {
@@ -324,7 +329,7 @@ sortByScoreDesc();
 
 .panel-header h3 {
   margin: 0 0 8px;
-  color: #28473f;
+  color: var(--color-primary-dark);
 }
 
 .panel-header p {

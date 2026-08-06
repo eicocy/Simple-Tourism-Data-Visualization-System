@@ -3,3 +3,4 @@ export * from "@/api/modules/user";
 export * from "@/api/modules/country";
 export * from "@/api/modules/recommendation";
 export * from "@/api/modules/system";
+export * from "@/api/modules/visualization";

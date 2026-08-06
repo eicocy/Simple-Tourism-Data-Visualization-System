@@ -139,11 +139,11 @@
 // 国家详情分析页面：展示单个国家的基础资料、最新指标和算法拆分结果
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ElMessage } from "element-plus";
 
 import { getCountryInsightDetailApi, getRecommendationExplanationApi } from "@/api";
-import echarts from "@/plugins/echarts";
+import { loadEcharts } from "@/plugins/echarts";
 import { getLocalizedCountryName } from "@/utils/countryNameMap";
+import { runWhenVisible } from "@/utils/lazyChart";
 
 const route = useRoute();
 const router = useRouter();
@@ -164,6 +164,9 @@ const tourismChartRef = ref(null);
 
 let radarChart = null;
 let tourismChart = null;
+let echartsInstance = null;
+let stopRadarChartRender = null;
+let stopTourismChartRender = null;
 
 // 国家显示名优先使用中文，缺失时再使用英文名称映射
 const displayName = computed(() => {
@@ -199,6 +202,13 @@ function formatNumber(value) {
 function chartNumber(value) {
   const numericValue = Number(value);
   return Number.isNaN(numericValue) ? 0 : Number(numericValue.toFixed(2));
+}
+
+async function getEcharts() {
+  if (!echartsInstance) {
+    echartsInstance = await loadEcharts();
+  }
+  return echartsInstance;
 }
 
 // 加载国家详情数据
@@ -246,16 +256,18 @@ async function loadAiExplanation() {
 // 渲染页面图表
 function renderCharts() {
   nextTick(() => {
-    renderRadarChart();
-    renderTourismChart();
+    scheduleRadarChartRender();
+    scheduleTourismChartRender();
   });
 }
 
 // 渲染核心指标雷达图
-function renderRadarChart() {
+async function renderRadarChart() {
   if (!radarChartRef.value || !indicator.value.country_id) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   radarChart?.dispose();
   radarChart = echarts.init(radarChartRef.value);
@@ -302,10 +314,12 @@ function renderRadarChart() {
 }
 
 // 渲染旅游适宜指数拆分柱状图
-function renderTourismChart() {
+async function renderTourismChart() {
   if (!tourismChartRef.value || !tourismDetail.value.tourism_index) {
     return;
   }
+
+  const echarts = await getEcharts();
 
   tourismChart?.dispose();
   tourismChart = echarts.init(tourismChartRef.value);
@@ -346,6 +360,26 @@ function renderTourismChart() {
 }
 
 // 页面尺寸变化时重绘图表
+function scheduleRadarChartRender() {
+  if (radarChart) {
+    renderRadarChart();
+    return;
+  }
+
+  stopRadarChartRender?.();
+  stopRadarChartRender = runWhenVisible(radarChartRef, renderRadarChart);
+}
+
+function scheduleTourismChartRender() {
+  if (tourismChart) {
+    renderTourismChart();
+    return;
+  }
+
+  stopTourismChartRender?.();
+  stopTourismChartRender = runWhenVisible(tourismChartRef, renderTourismChart);
+}
+
 function handleResize() {
   radarChart?.resize();
   tourismChart?.resize();
@@ -358,6 +392,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("resize", handleResize);
+  stopRadarChartRender?.();
+  stopTourismChartRender?.();
   radarChart?.dispose();
   tourismChart?.dispose();
 });

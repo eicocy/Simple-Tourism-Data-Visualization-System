@@ -123,7 +123,6 @@
 <script setup>
 import { onMounted, reactive, ref } from "vue";
 import { Refresh, Search } from "@element-plus/icons-vue";
-import { ElMessage } from "element-plus";
 
 import { getOperationLogListApi } from "@/api";
 

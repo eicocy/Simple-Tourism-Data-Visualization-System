@@ -2,6 +2,8 @@
 
 from django.urls import path
 
+from apps.visualization.views import MapAgentChatAPIView
 
-# 当前阶段暂不提供具体接口，先保留空路由列表
-urlpatterns = []
+urlpatterns = [
+    path("agent/chat/", MapAgentChatAPIView.as_view(), name="visualization-agent-chat"),
+]
